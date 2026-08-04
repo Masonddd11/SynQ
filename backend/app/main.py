@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.routers import alerts, analyses, stocks, user, watchlist
 
 
 @asynccontextmanager
@@ -37,10 +38,9 @@ async def health_check():
     return {"status": "ok", "version": settings.app_version}
 
 
-# Import and include routers
-# from app.routers import analyses, watchlist, alerts, user, stocks
-# app.include_router(stocks.router, prefix=settings.api_prefix, tags=["Stocks"])
-# app.include_router(analyses.router, prefix=settings.api_prefix, tags=["Analyses"])
-# app.include_router(watchlist.router, prefix=settings.api_prefix, tags=["Watchlist"])
-# app.include_router(alerts.router, prefix=settings.api_prefix, tags=["Alerts"])
-# app.include_router(user.router, prefix=settings.api_prefix, tags=["User"])
+# Include routers
+app.include_router(stocks.router, prefix=settings.api_prefix, tags=["Stocks"])
+app.include_router(analyses.router, prefix=settings.api_prefix, tags=["Analyses"])
+app.include_router(watchlist.router, prefix=settings.api_prefix, tags=["Watchlist"])
+app.include_router(alerts.router, prefix=settings.api_prefix, tags=["Alerts"])
+app.include_router(user.router, prefix=settings.api_prefix, tags=["User"])
