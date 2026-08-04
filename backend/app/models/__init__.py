@@ -1,5 +1,6 @@
 """Pydantic models for API request/response schemas."""
 
+from app.models.base import CamelModel
 from app.models.analysis import (
     Analysis,
     AnalysisStatus,
@@ -23,6 +24,7 @@ from app.models.stock import Stock
 from app.models.common import Pagination, ErrorResponse
 
 __all__ = [
+    "CamelModel",
     "Analysis",
     "AnalysisStatus",
     "Signal",

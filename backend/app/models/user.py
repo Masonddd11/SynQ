@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel
+from app.models.base import CamelModel
 
 
 class SubscriptionTier(str, Enum):
@@ -14,7 +14,7 @@ class SubscriptionTier(str, Enum):
     ELITE = "elite"
 
 
-class Profile(BaseModel):
+class Profile(CamelModel):
     """User profile."""
 
     id: str
@@ -24,7 +24,7 @@ class Profile(BaseModel):
     created_at: datetime | None = None
 
 
-class Subscription(BaseModel):
+class Subscription(CamelModel):
     """Subscription status and usage."""
 
     tier: SubscriptionTier

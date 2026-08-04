@@ -3,8 +3,9 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
+from app.models.base import CamelModel
 from app.models.stock import Stock
 
 
@@ -27,13 +28,13 @@ class Signal(str, Enum):
     STRONG_SELL = "strong_sell"
 
 
-class CreateAnalysisRequest(BaseModel):
+class CreateAnalysisRequest(CamelModel):
     """Request to create a new analysis."""
 
     ticker: str
 
 
-class FundamentalResult(BaseModel):
+class FundamentalResult(CamelModel):
     """Fundamental analysis result."""
 
     bull_case: str | None = None
@@ -42,7 +43,7 @@ class FundamentalResult(BaseModel):
     risk_score: float | None = None
 
 
-class SentimentResult(BaseModel):
+class SentimentResult(CamelModel):
     """Sentiment analysis result."""
 
     score: float | None = None  # -100 to 100
@@ -50,7 +51,7 @@ class SentimentResult(BaseModel):
     key_themes: list[str] | None = None
 
 
-class NewsItem(BaseModel):
+class NewsItem(CamelModel):
     """A single news item."""
 
     title: str
@@ -60,7 +61,7 @@ class NewsItem(BaseModel):
     sentiment: float | None = None  # -1 to 1
 
 
-class NewsResult(BaseModel):
+class NewsResult(CamelModel):
     """News analysis result."""
 
     recent_news: list[NewsItem] | None = None
@@ -68,7 +69,7 @@ class NewsResult(BaseModel):
     risk_events: list[str] | None = None
 
 
-class AgentResult(BaseModel):
+class AgentResult(CamelModel):
     """Layer 1: Agent analysis result."""
 
     fundamental: FundamentalResult | None = None
@@ -76,7 +77,7 @@ class AgentResult(BaseModel):
     news: NewsResult | None = None
 
 
-class GraphRAGResult(BaseModel):
+class GraphRAGResult(CamelModel):
     """Layer 2: Knowledge graph result."""
 
     entities: list[dict] | None = None
@@ -84,7 +85,7 @@ class GraphRAGResult(BaseModel):
     report: str | None = None
 
 
-class EntrySignal(BaseModel):
+class EntrySignal(CamelModel):
     """Entry signal from indicator."""
 
     direction: str | None = None  # long, short, neutral
@@ -92,7 +93,7 @@ class EntrySignal(BaseModel):
     take_profit: list[float] | None = None
 
 
-class IndicatorResult(BaseModel):
+class IndicatorResult(CamelModel):
     """Layer 3: Technical indicator result."""
 
     momentum: dict | None = None
@@ -102,7 +103,7 @@ class IndicatorResult(BaseModel):
     entry_signal: EntrySignal | None = None
 
 
-class Analysis(BaseModel):
+class Analysis(CamelModel):
     """Full analysis response."""
 
     id: str
@@ -120,7 +121,7 @@ class Analysis(BaseModel):
     error_message: str | None = None
 
 
-class AnalysisListResponse(BaseModel):
+class AnalysisListResponse(CamelModel):
     """Paginated list of analyses."""
 
     data: list[Analysis]

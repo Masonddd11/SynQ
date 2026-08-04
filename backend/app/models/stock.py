@@ -2,10 +2,10 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from app.models.base import CamelModel
 
 
-class Stock(BaseModel):
+class Stock(CamelModel):
     """Stock metadata."""
 
     ticker: str

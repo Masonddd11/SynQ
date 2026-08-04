@@ -3,8 +3,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel
-
+from app.models.base import CamelModel
 from app.models.stock import Stock
 
 
@@ -18,7 +17,7 @@ class AlertType(str, Enum):
     NEWS_SPIKE = "news_spike"
 
 
-class CreateAlertRequest(BaseModel):
+class CreateAlertRequest(CamelModel):
     """Request to create an alert."""
 
     ticker: str
@@ -27,7 +26,7 @@ class CreateAlertRequest(BaseModel):
     target_price: float | None = None
 
 
-class UpdateAlertRequest(BaseModel):
+class UpdateAlertRequest(CamelModel):
     """Request to update an alert."""
 
     threshold: float | None = None
@@ -35,7 +34,7 @@ class UpdateAlertRequest(BaseModel):
     is_active: bool | None = None
 
 
-class Alert(BaseModel):
+class Alert(CamelModel):
     """Alert rule."""
 
     id: str

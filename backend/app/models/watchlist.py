@@ -2,13 +2,14 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.models.analysis import Analysis
+from app.models.base import CamelModel
 from app.models.stock import Stock
 
 
-class CreateWatchlistRequest(BaseModel):
+class CreateWatchlistRequest(CamelModel):
     """Request to add a stock to watchlist."""
 
     ticker: str
@@ -16,14 +17,14 @@ class CreateWatchlistRequest(BaseModel):
     alert_threshold: float = Field(default=10.0, ge=1, le=50)
 
 
-class UpdateWatchlistRequest(BaseModel):
+class UpdateWatchlistRequest(CamelModel):
     """Request to update watchlist item."""
 
     notes: str | None = None
     alert_threshold: float | None = Field(None, ge=1, le=50)
 
 
-class WatchlistItem(BaseModel):
+class WatchlistItem(CamelModel):
     """Watchlist item with stock metadata."""
 
     id: str
