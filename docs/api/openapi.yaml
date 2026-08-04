@@ -1,0 +1,735 @@
+openapi: 3.1.0
+info:
+  title: SynQ API
+  version: 0.1.0
+  description: |
+    AI-powered swing trading analysis platform.
+
+    ## Auth
+    Supabase JWT in `Authorization: Bearer <token>` header.
+    Backend validates JWT, uses `user_id` for Row Level Security.
+
+    ## Errors
+    ```json
+    { "error": { "code": "STRING", "message": "STRING", "details": {} } }
+    ```
+
+servers:
+  - url: http://localhost:8000/api
+  - url: https://api.synq.ai/api
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==================== STOCKS ====================
+  /stocks:
+    get:
+      operationId: listStocks
+      summary: List available stocks
+      description: Returns stocks with metadata for autocomplete/validation.
+      tags: [Stocks]
+      security: []
+      parameters:
+        - name: query
+          in: query
+          schema: { type: string }
+          description: Search by ticker or company name
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated stocks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Stock'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /stocks/{ticker}:
+    get:
+      operationId: getStock
+      summary: Get stock by ticker
+      tags: [Stocks]
+      security: []
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Stock metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stock'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== ANALYSES ====================
+  /analyses:
+    post:
+      operationId: createAnalysis
+      summary: Run stock analysis
+      description: Returns immediately with job ID. Poll GET /analyses/{id} for results.
+      tags: [Analyses]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ticker]
+              properties:
+                ticker:
+                  type: string
+                  example: NVDA
+      responses:
+        '201':
+          description: Analysis job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    get:
+      operationId: listAnalyses
+      summary: List user's analyses
+      tags: [Analyses]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: ticker
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processing, completed, failed]
+      responses:
+        '200':
+          description: Paginated analyses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Analysis'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /analyses/{id}:
+    get:
+      operationId: getAnalysis
+      summary: Get analysis by ID
+      tags: [Analyses]
+      parameters:
+        - $ref: '#/components/parameters/AnalysisId'
+      responses:
+        '200':
+          description: Analysis with results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analyses/latest:
+    get:
+      operationId: getLatestAnalysis
+      summary: Get latest analysis for a ticker
+      tags: [Analyses]
+      parameters:
+        - name: ticker
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Latest analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== WATCHLIST ====================
+  /watchlist:
+    get:
+      operationId: listWatchlist
+      summary: List watchlist
+      tags: [Watchlist]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated watchlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WatchlistItem'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: addToWatchlist
+      summary: Add to watchlist
+      tags: [Watchlist]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ticker]
+              properties:
+                ticker:
+                  type: string
+                notes:
+                  type: string
+                alertThreshold:
+                  type: number
+                  minimum: 1
+                  maximum: 50
+                  default: 10
+      responses:
+        '201':
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchlistItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /watchlist/{id}:
+    patch:
+      operationId: updateWatchlistItem
+      summary: Update watchlist item
+      tags: [Watchlist]
+      parameters:
+        - $ref: '#/components/parameters/WatchlistId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                alertThreshold:
+                  type: number
+                  minimum: 1
+                  maximum: 50
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchlistItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: removeFromWatchlist
+      summary: Remove from watchlist
+      tags: [Watchlist]
+      parameters:
+        - $ref: '#/components/parameters/WatchlistId'
+      responses:
+        '204':
+          description: Removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== ALERTS ====================
+  /alerts:
+    get:
+      operationId: listAlerts
+      summary: List alerts
+      tags: [Alerts]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: ticker
+          in: query
+          schema: { type: string }
+        - name: isActive
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Paginated alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createAlert
+      summary: Create alert
+      tags: [Alerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ticker, alertType]
+              properties:
+                ticker:
+                  type: string
+                alertType:
+                  type: string
+                  enum: [score_change, signal_change, price_target, earnings_warning, news_spike]
+                threshold:
+                  type: number
+                targetPrice:
+                  type: number
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /alerts/{id}:
+    patch:
+      operationId: updateAlert
+      summary: Update alert
+      tags: [Alerts]
+      parameters:
+        - $ref: '#/components/parameters/AlertId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                threshold:
+                  type: number
+                targetPrice:
+                  type: number
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteAlert
+      summary: Delete alert
+      tags: [Alerts]
+      parameters:
+        - $ref: '#/components/parameters/AlertId'
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== USER ====================
+  /user/profile:
+    get:
+      operationId: getProfile
+      summary: Get user profile
+      tags: [User]
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      operationId: updateProfile
+      summary: Update profile
+      tags: [User]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/subscription:
+    get:
+      operationId: getSubscription
+      summary: Get subscription status
+      tags: [User]
+      responses:
+        '200':
+          description: Subscription info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== SYSTEM ====================
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      tags: [System]
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  version: { type: string, example: 0.1.0 }
+
+# ============================================================
+# COMPONENTS
+# ============================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    AnalysisId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    WatchlistId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AlertId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Stock:
+      type: object
+      properties:
+        ticker: { type: string, example: NVDA }
+        companyName: { type: string, example: NVIDIA Corporation }
+        sector: { type: string, example: Technology }
+        industry: { type: string, example: Semiconductors }
+        marketCap: { type: integer, description: "in USD" }
+        exchange: { type: string, example: NASDAQ }
+        isActive: { type: boolean }
+        lastPrice: { type: number, nullable: true }
+        lastUpdatedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    Profile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        fullName: { type: string, nullable: true }
+        subscriptionTier: { type: string, enum: [free, pro, elite] }
+        createdAt: { type: string, format: date-time }
+
+    Subscription:
+      type: object
+      properties:
+        tier: { type: string, enum: [free, pro, elite] }
+        analysesUsedToday: { type: integer }
+        dailyLimit: { type: integer }
+        resetsAt: { type: string, format: date-time }
+
+    Analysis:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ticker: { type: string }
+        stock:
+          $ref: '#/components/schemas/Stock'
+        status: { type: string, enum: [pending, processing, completed, failed] }
+        agentResult:
+          type: object
+          nullable: true
+          properties:
+            fundamental:
+              type: object
+              properties:
+                bullCase: { type: string }
+                bearCase: { type: string }
+                keyMetrics: { type: object }
+                riskScore: { type: number }
+            sentiment:
+              type: object
+              properties:
+                score: { type: number, description: "-100 to 100" }
+                sources: { type: array, items: { type: string } }
+                keyThemes: { type: array, items: { type: string } }
+            news:
+              type: object
+              properties:
+                recentNews:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title: { type: string }
+                      source: { type: string }
+                      url: { type: string, format: uri }
+                      publishedAt: { type: string, format: date-time }
+                      sentiment: { type: number, description: "-1 to 1" }
+                upcomingCatalysts: { type: array, items: { type: string } }
+                riskEvents: { type: array, items: { type: string } }
+        graphragResult:
+          type: object
+          nullable: true
+          properties:
+            entities:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  type: { type: string }
+                  relationships: { type: array, items: { type: string } }
+            report: { type: string }
+        indicatorResult:
+          type: object
+          nullable: true
+          properties:
+            momentum:
+              type: object
+              properties:
+                rsi: { type: number }
+                macd: { type: object }
+                rateOfChange: { type: number }
+            volume:
+              type: object
+              properties:
+                accumulationDistribution: { type: number }
+                volumeTrend: { type: string }
+            structure:
+              type: object
+              properties:
+                trend: { type: string }
+                supportLevels: { type: array, items: { type: number } }
+                resistanceLevels: { type: array, items: { type: number } }
+            volatility:
+              type: object
+              properties:
+                atr: { type: number }
+                regime: { type: string }
+            entrySignal:
+              type: object
+              properties:
+                direction: { type: string, enum: [long, short, neutral] }
+                stopLoss: { type: number }
+                takeProfit: { type: array, items: { type: number } }
+        confluenceScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        signal:
+          type: string
+          enum: [strong_buy, buy, neutral, sell, strong_sell]
+          nullable: true
+        createdAt: { type: string, format: date-time }
+        processingStartedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        errorMessage: { type: string, nullable: true }
+
+    WatchlistItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ticker: { type: string }
+        stock:
+          $ref: '#/components/schemas/Stock'
+        notes: { type: string, nullable: true }
+        alertThreshold: { type: number }
+        lastAnalyzedAt: { type: string, format: date-time, nullable: true }
+        latestAnalysis:
+          $ref: '#/components/schemas/Analysis'
+          nullable: true
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Alert:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ticker: { type: string }
+        stock:
+          $ref: '#/components/schemas/Stock'
+        alertType: { type: string, enum: [score_change, signal_change, price_target, earnings_warning, news_spike] }
+        threshold: { type: number, nullable: true }
+        targetPrice: { type: number, nullable: true }
+        isActive: { type: boolean }
+        lastTriggeredAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Pagination:
+      type: object
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalItems: { type: integer }
+        totalPages: { type: integer }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: VALIDATION_ERROR }
+                  message: { type: string }
+    Unauthorized:
+      description: Invalid JWT
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: UNAUTHORIZED }
+                  message: { type: string }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: NOT_FOUND }
+                  message: { type: string }
+    Conflict:
+      description: Already exists
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: CONFLICT }
+                  message: { type: string }
+    RateLimitExceeded:
+      description: Daily limit reached
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: RATE_LIMIT_EXCEEDED }
+                  message: { type: string }

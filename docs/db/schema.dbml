@@ -1,0 +1,115 @@
+// SynQ Database Schema
+// Paste into https://dbdiagram.io for visualization
+
+// ============================================================
+// STOCKS
+// Reference table for ticker metadata and validation
+// ============================================================
+Table stocks {
+  ticker text [pk] // e.g., "NVDA", "AAPL"
+  company_name text [not null]
+  sector text // Technology, Healthcare, etc.
+  industry text // Semiconductors, Software, etc.
+  market_cap bigint // in USD
+  exchange text // NASDAQ, NYSE, etc.
+  is_active boolean [not null, default: true]
+  last_price float // latest known price
+  last_updated_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+// ============================================================
+// PROFILES
+// Extends Supabase auth.users
+// ============================================================
+Table profiles {
+  id uuid [pk]
+  email text [not null]
+  full_name text
+  subscription_tier text [not null, default: 'free'] // free | pro | elite
+  analyses_used_today int [not null, default: 0]
+  analyses_reset_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+// ============================================================
+// ANALYSES
+// Stock analysis results (async job)
+// ============================================================
+Table analyses {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  user_id uuid [not null, ref: > profiles.id]
+  ticker text [not null, ref: > stocks.ticker]
+  status text [not null, default: 'pending'] // pending | processing | completed | failed
+
+  // Layer 1: Agent Analysis
+  agent_result jsonb // { fundamental, sentiment, news }
+
+  // Layer 2: GraphRAG
+  graphrag_result jsonb // { entities, relationships, report }
+
+  // Layer 3: Swing Indicator
+  indicator_result jsonb // { momentum, volume, structure, entrySignal }
+
+  // Confluence
+  confluence_score float // 0-100
+  signal text // strong_buy | buy | neutral | sell | strong_sell
+
+  // Metadata
+  error_message text
+  created_at timestamptz [not null, default: `now()`]
+  processing_started_at timestamptz
+  completed_at timestamptz
+}
+
+// ============================================================
+// WATCHLIST
+// Tracked stocks with alert thresholds
+// ============================================================
+Table watchlist {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  user_id uuid [not null, ref: > profiles.id]
+  ticker text [not null, ref: > stocks.ticker]
+  notes text
+  alert_threshold float [default: 10.0]
+  last_analyzed_at timestamptz // when this stock was last analyzed
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, ticker) [unique]
+  }
+}
+
+// ============================================================
+// ALERTS
+// Notification rules
+// ============================================================
+Table alerts {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  user_id uuid [not null, ref: > profiles.id]
+  ticker text [not null, ref: > stocks.ticker]
+  alert_type text [not null] // score_change | signal_change | price_target | earnings_warning | news_spike
+  threshold float
+  target_price float
+  is_active boolean [not null, default: true]
+  last_triggered_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+}
+
+// ============================================================
+// ANALYSIS SNAPSHOTS
+// Historical scores for backtesting
+// ============================================================
+Table analysis_snapshots {
+  id uuid [pk, default: `uuid_generate_v4()`]
+  analysis_id uuid [not null, ref: > analyses.id]
+  ticker text [not null, ref: > stocks.ticker]
+  confluence_score float [not null]
+  signal text [not null]
+  agent_score float
+  graphrag_score float
+  indicator_score float
+  snapshot_at timestamptz [not null, default: `now()`]
+}
