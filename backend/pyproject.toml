@@ -25,6 +25,10 @@ dev = [
     "mypy>=1.11",
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["tests*", "scripts*", "evidence*", "*.cache*", "*_cache*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

@@ -51,3 +51,6 @@ supabase/.temp/
 
 # OpenCode session state
 .omo/
+
+# Work-tracking state
+.sisyphus/
