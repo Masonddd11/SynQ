@@ -1,10 +1,11 @@
 """Watchlist router - manage tracked stocks."""
-
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from supabase_auth.types import User
 
+from app.core.auth import get_current_user
 from app.models.watchlist import (
     CreateWatchlistRequest,
     UpdateWatchlistRequest,
@@ -28,15 +29,14 @@ def clear_watchlist_db():
 async def list_watchlist(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    user: User = Depends(get_current_user),
 ):
     """List user's watchlist."""
     # TODO: Query watchlist table filtered by user_id
     items = list(_watchlist_db.values())
-
     total = len(items)
     start = (page - 1) * page_size
     end = start + page_size
-
     return {
         "data": [item.model_dump() for item in items[start:end]],
         "pagination": {
@@ -49,7 +49,10 @@ async def list_watchlist(
 
 
 @router.post("", response_model=WatchlistItem, status_code=201)
-async def add_to_watchlist(request: CreateWatchlistRequest):
+async def add_to_watchlist(
+    request: CreateWatchlistRequest,
+    user: User = Depends(get_current_user),
+):
     """Add a stock to watchlist."""
     # TODO: Check if ticker exists in stocks table
     # TODO: Check if already in user's watchlist (return 409)
@@ -63,7 +66,7 @@ async def add_to_watchlist(request: CreateWatchlistRequest):
             raise HTTPException(status_code=409, detail="Ticker already in watchlist")
 
     item_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     item = WatchlistItem(
         id=item_id,
@@ -79,7 +82,11 @@ async def add_to_watchlist(request: CreateWatchlistRequest):
 
 
 @router.patch("/{item_id}", response_model=WatchlistItem)
-async def update_watchlist_item(item_id: str, request: UpdateWatchlistRequest):
+async def update_watchlist_item(
+    item_id: str,
+    request: UpdateWatchlistRequest,
+    user: User = Depends(get_current_user),
+):
     """Update watchlist item."""
     # TODO: Verify user owns this item
     item = _watchlist_db.get(item_id)
@@ -91,12 +98,15 @@ async def update_watchlist_item(item_id: str, request: UpdateWatchlistRequest):
     if request.alert_threshold is not None:
         item.alert_threshold = request.alert_threshold
 
-    item.updated_at = datetime.now(timezone.utc)
+    item.updated_at = datetime.now(UTC)
     return item
 
 
 @router.delete("/{item_id}", status_code=204)
-async def remove_from_watchlist(item_id: str):
+async def remove_from_watchlist(
+    item_id: str,
+    user: User = Depends(get_current_user),
+):
     """Remove stock from watchlist."""
     # TODO: Verify user owns this item
     if item_id not in _watchlist_db:

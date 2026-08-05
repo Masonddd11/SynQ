@@ -1,5 +1,9 @@
 """Tests for watchlist endpoints."""
 
+import pytest
+
+pytestmark = pytest.mark.usefixtures("auth_user")
+
 
 def test_add_to_watchlist(client):
     """Add stock to watchlist."""

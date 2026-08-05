@@ -39,6 +39,21 @@ def test_invalid_token_raises_401(mock_get_supabase: MagicMock) -> None:
 
 
 @patch("app.core.auth.get_supabase")
+def test_get_user_raises_returns_401(mock_get_supabase: MagicMock) -> None:
+    """When get_user raises (malformed/expired JWT), raise 401 not 500."""
+    mock_client = MagicMock()
+    mock_client.auth.get_user.side_effect = RuntimeError("boom")
+    mock_get_supabase.return_value = mock_client
+
+    with pytest.raises(HTTPException) as excinfo:
+        get_current_user(credentials=_credentials("jwt"))
+
+    assert excinfo.value.status_code == 401
+    assert excinfo.value.detail == "Invalid token"
+    mock_client.auth.get_user.assert_called_once_with(jwt="jwt")
+
+
+@patch("app.core.auth.get_supabase")
 def test_valid_token_returns_user(mock_get_supabase: MagicMock) -> None:
     """A successful get_user response should return the authenticated user."""
     fake_user = SimpleNamespace(id="abc-123")

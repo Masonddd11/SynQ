@@ -18,7 +18,13 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing bearer token",
         )
-    response = get_supabase().auth.get_user(jwt=credentials.credentials)
+    try:
+        response = get_supabase().auth.get_user(jwt=credentials.credentials)
+    except Exception:  # noqa: BLE001 - any auth failure is an invalid token
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        ) from None
     if response is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

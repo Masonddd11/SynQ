@@ -1,5 +1,9 @@
 """Tests for alerts endpoints."""
 
+import pytest
+
+pytestmark = pytest.mark.usefixtures("auth_user")
+
 
 def test_create_alert(client):
     """Create alert rule."""

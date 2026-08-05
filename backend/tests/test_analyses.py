@@ -8,8 +8,10 @@ import pytest
 from app.config import settings
 from app.models.analysis import Analysis, AnalysisStatus
 
-# test-user injected as settings.dev_user_id by the autouse fixture
-TEST_USER_ID = "test-user"
+# Matches VALID_USER.id injected by the auth_user fixture
+TEST_USER_ID = "test-user-123"
+
+pytestmark = pytest.mark.usefixtures("auth_user")
 
 
 def _analysis(analysis_id: str, ticker: str, status: AnalysisStatus) -> Analysis:
@@ -157,6 +159,6 @@ def test_get_latest_analysis_not_found(client, mock_analysis_repository):
 
 
 def test_owner_id_passed_to_create(client, mock_analysis_repository):
-    """Router passes the patched dev_user_id as the owner to create_analysis."""
+    """Router passes the authenticated user's id as owner to create_analysis."""
     client.post("/api/analyses", json={"ticker": "NVDA"})
     mock_analysis_repository.create_analysis.assert_called_with(TEST_USER_ID, "NVDA")

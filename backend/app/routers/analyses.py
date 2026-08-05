@@ -1,8 +1,8 @@
 """Analyses router - create and query stock analyses."""
+from fastapi import APIRouter, Depends, HTTPException, Query
+from supabase_auth.types import User
 
-from fastapi import APIRouter, HTTPException, Query
-
-from app.config import settings
+from app.core.auth import get_current_user
 from app.models.analysis import (
     Analysis,
     AnalysisListResponse,
@@ -23,19 +23,15 @@ def _get_analysis_repo() -> AnalysisRepository:
     return _analysis_repo
 
 
-def _owner_id() -> str:
-    """Return the user id used for persistence. Dev fallback until auth is wired."""
-    if not settings.dev_user_id:
-        raise HTTPException(status_code=500, detail="DEV_USER_ID not configured")
-    return settings.dev_user_id
-
-
 @router.post("", response_model=Analysis, status_code=201)
-async def create_analysis(request: CreateAnalysisRequest):
+async def create_analysis(
+    request: CreateAnalysisRequest,
+    user: User = Depends(get_current_user),
+):
     ticker = request.ticker.strip().upper()
     if not ticker:
         raise HTTPException(status_code=422, detail="Ticker cannot be empty")
-    return _get_analysis_repo().create_analysis(_owner_id(), ticker)
+    return _get_analysis_repo().create_analysis(user.id, ticker)
 
 
 @router.get("", response_model=AnalysisListResponse)
@@ -44,9 +40,10 @@ async def list_analyses(
     page_size: int = Query(20, ge=1, le=100),
     ticker: str | None = Query(None),
     status: AnalysisStatus | None = Query(None),
+    user: User = Depends(get_current_user),
 ):
     data, total = _get_analysis_repo().list_analyses(
-        user_id=_owner_id(), ticker=ticker, status=status, page=page, page_size=page_size
+        user_id=user.id, ticker=ticker, status=status, page=page, page_size=page_size
     )
     return AnalysisListResponse(
         data=data,
@@ -60,16 +57,22 @@ async def list_analyses(
 
 
 @router.get("/latest", response_model=Analysis)
-async def get_latest_analysis(ticker: str = Query(...)):
-    analysis = _get_analysis_repo().get_latest_analysis(_owner_id(), ticker.upper())
+async def get_latest_analysis(
+    ticker: str = Query(...),
+    user: User = Depends(get_current_user),
+):
+    analysis = _get_analysis_repo().get_latest_analysis(user.id, ticker.upper())
     if not analysis:
         raise HTTPException(status_code=404, detail="No completed analysis found for this ticker")
     return analysis
 
 
 @router.get("/{analysis_id}", response_model=Analysis)
-async def get_analysis(analysis_id: str):
-    analysis = _get_analysis_repo().get_analysis(_owner_id(), analysis_id)
+async def get_analysis(
+    analysis_id: str,
+    user: User = Depends(get_current_user),
+):
+    analysis = _get_analysis_repo().get_analysis(user.id, analysis_id)
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
     return analysis
