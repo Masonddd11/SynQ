@@ -11,9 +11,9 @@ services:
     ports:
       - '5432:5432'
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: synq
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-synq}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docs/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
@@ -52,7 +52,7 @@ services:
     ports:
       - '8000:8000'
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/synq
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-synq}
       - REDIS_URL=redis://redis:6379/0
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}

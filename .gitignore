@@ -29,6 +29,8 @@ build/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
 # Next.js
 .next/
@@ -43,3 +45,9 @@ logs/
 
 # Supabase
 supabase/.temp/
+
+# Turborepo
+.turbo/
+
+# OpenCode session state
+.omo/

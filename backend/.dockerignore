@@ -1,0 +1,48 @@
+# ============================================================
+# Docker ignore for SynQ Backend
+# Prevents copying local dev artifacts into container
+# ============================================================
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Local env (never bake secrets into image)
+.env
+.env.*
+
+# Test artifacts
+tests/
+htmlcov/
+
+# Docs
+*.md
+!README.md
+
+# Docker (don't nest)
+Dockerfile
+docker-compose*.yml
