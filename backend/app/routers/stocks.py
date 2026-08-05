@@ -3,11 +3,20 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from app.models.stock import Stock
+from app.repositories.stock import StockRepository
 
 router = APIRouter()
 
-# TODO: Replace with actual database queries via Supabase client
-# For now, return mock data for testing
+# Lazy-initialized repository instance
+_stock_repo: StockRepository | None = None
+
+
+def _get_stock_repo() -> StockRepository:
+    """Get or create the stock repository instance."""
+    global _stock_repo
+    if _stock_repo is None:
+        _stock_repo = StockRepository()
+    return _stock_repo
 
 
 @router.get("", response_model=dict)
@@ -17,53 +26,14 @@ async def list_stocks(
     page_size: int = Query(20, ge=1, le=100),
 ):
     """List available stocks with metadata."""
-    # TODO: Query stocks table, filter by query, paginate
-    mock_stocks = [
-        Stock(
-            ticker="NVDA",
-            company_name="NVIDIA Corporation",
-            sector="Technology",
-            industry="Semiconductors",
-            market_cap=3_000_000_000_000,
-            exchange="NASDAQ",
-            is_active=True,
-            last_price=125.50,
-        ),
-        Stock(
-            ticker="AAPL",
-            company_name="Apple Inc.",
-            sector="Technology",
-            industry="Consumer Electronics",
-            market_cap=3_500_000_000_000,
-            exchange="NASDAQ",
-            is_active=True,
-            last_price=195.20,
-        ),
-        Stock(
-            ticker="TSLA",
-            company_name="Tesla, Inc.",
-            sector="Consumer Cyclical",
-            industry="Auto Manufacturers",
-            market_cap=800_000_000_000,
-            exchange="NASDAQ",
-            is_active=True,
-            last_price=245.80,
-        ),
-    ]
-
-    if query:
-        query_upper = query.upper()
-        mock_stocks = [
-            s for s in mock_stocks
-            if query_upper in s.ticker or query.lower() in s.company_name.lower()
-        ]
-
-    total = len(mock_stocks)
-    start = (page - 1) * page_size
-    end = start + page_size
+    try:
+        repo = _get_stock_repo()
+        stocks, total = repo.list_stocks(query=query, page=page, page_size=page_size)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     return {
-        "data": [s.model_dump() for s in mock_stocks[start:end]],
+        "data": [s.model_dump() for s in stocks],
         "pagination": {
             "page": page,
             "page_size": page_size,
@@ -76,41 +46,12 @@ async def list_stocks(
 @router.get("/{ticker}", response_model=Stock)
 async def get_stock(ticker: str):
     """Get stock metadata by ticker."""
-    # TODO: Query stocks table by ticker
-    mock_stocks = {
-        "NVDA": Stock(
-            ticker="NVDA",
-            company_name="NVIDIA Corporation",
-            sector="Technology",
-            industry="Semiconductors",
-            market_cap=3_000_000_000_000,
-            exchange="NASDAQ",
-            is_active=True,
-            last_price=125.50,
-        ),
-        "AAPL": Stock(
-            ticker="AAPL",
-            company_name="Apple Inc.",
-            sector="Technology",
-            industry="Consumer Electronics",
-            market_cap=3_500_000_000_000,
-            exchange="NASDAQ",
-            is_active=True,
-            last_price=195.20,
-        ),
-        "TSLA": Stock(
-            ticker="TSLA",
-            company_name="Tesla, Inc.",
-            sector="Consumer Cyclical",
-            industry="Auto Manufacturers",
-            market_cap=800_000_000_000,
-            exchange="NASDAQ",
-            is_active=True,
-            last_price=245.80,
-        ),
-    }
+    try:
+        repo = _get_stock_repo()
+        stock = repo.get_stock(ticker)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-    stock = mock_stocks.get(ticker.upper())
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 

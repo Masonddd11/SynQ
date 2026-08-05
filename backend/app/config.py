@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_key: str = ""
     supabase_service_key: str = ""
+    dev_user_id: str = ""
 
     # LLM Providers
     openai_api_key: str = ""
