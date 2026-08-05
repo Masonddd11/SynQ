@@ -68,6 +68,10 @@ async def create_analysis(
     # TODO: Check user's daily limit
     # TODO: Verify user is authenticated
 
+    ticker = request.ticker.strip().upper()
+    if not ticker:
+        raise HTTPException(status_code=422, detail="Ticker cannot be empty")
+
     analysis_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
 

@@ -38,9 +38,9 @@ async def health_check():
     return {"status": "ok", "version": settings.app_version}
 
 
-# Include routers
-app.include_router(stocks.router, prefix=settings.api_prefix, tags=["Stocks"])
-app.include_router(analyses.router, prefix=settings.api_prefix, tags=["Analyses"])
-app.include_router(watchlist.router, prefix=settings.api_prefix, tags=["Watchlist"])
-app.include_router(alerts.router, prefix=settings.api_prefix, tags=["Alerts"])
-app.include_router(user.router, prefix=settings.api_prefix, tags=["User"])
+# Include routers with correct prefixes
+app.include_router(stocks.router, prefix="/api/stocks", tags=["Stocks"])
+app.include_router(analyses.router, prefix="/api/analyses", tags=["Analyses"])
+app.include_router(watchlist.router, prefix="/api/watchlist", tags=["Watchlist"])
+app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
+app.include_router(user.router, prefix="/api/user", tags=["User"])

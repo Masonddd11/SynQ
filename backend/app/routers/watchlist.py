@@ -19,6 +19,11 @@ router = APIRouter()
 _watchlist_db: dict[str, WatchlistItem] = {}
 
 
+def clear_watchlist_db():
+    """Clear the in-memory watchlist database (for testing)."""
+    _watchlist_db.clear()
+
+
 @router.get("", response_model=dict)
 async def list_watchlist(
     page: int = Query(1, ge=1),
