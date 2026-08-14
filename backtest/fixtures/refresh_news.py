@@ -64,19 +64,24 @@ def _get_trading_days(start: str, end: str) -> list[str]:
 
 def _fetch_day_articles(
     date_str: str, api_key: str, universe: set[str],
+    limiter=None,
 ) -> dict[str, list[dict]]:
     """Fetch all articles for one trading day, filter to universe tickers.
 
     Uses date range prev_day 16:00 ET (21:00 UTC) to current_day 21:00 UTC
-    to capture overnight + market hours news.
+    to capture overnight + market hours news. Rate-limited to the Massive
+    free tier (5 calls/min) with 429 backoff retry.
     """
-    import requests
     from tools.sentiment.news import compact_articles
+    from backtest.fixtures._rate_limit import RateLimiter, get_with_retry
 
     # Window: previous day 21:00 UTC to this day 21:00 UTC (~24h)
     day = datetime.strptime(date_str, "%Y-%m-%d")
     end_utc = day.replace(hour=21, tzinfo=timezone.utc)
     start_utc = end_utc - timedelta(hours=24)
+
+    if limiter is None:
+        limiter = RateLimiter()
 
     all_articles: list[dict] = []
     url = "https://api.massive.com/v2/reference/news"
@@ -92,8 +97,7 @@ def _fetch_day_articles(
     # Paginate
     page = 1
     while True:
-        resp = requests.get(url, params=params, timeout=30)
-        resp.raise_for_status()
+        resp = get_with_retry(url, params=params, limiter=limiter, timeout=30)
         data = resp.json()
         results = data.get("results", [])
         all_articles.extend(results)
@@ -106,7 +110,6 @@ def _fetch_day_articles(
         url = next_url
         params = {"apiKey": api_key}
         page += 1
-        time.sleep(0.15)
 
     # Organize by ticker, filter to universe
     by_ticker: dict[str, list[dict]] = {}
@@ -128,6 +131,7 @@ def refresh_news(
 ) -> None:
     """Download news articles for all trading days in range."""
     from config.settings import get_settings
+    from backtest.fixtures._rate_limit import RateLimiter
 
     api_key = get_settings().polygon_api_key
     if not api_key:
@@ -146,6 +150,10 @@ def refresh_news(
     fetched = 0
     total_articles = 0
 
+    # One shared limiter across all days → every API call is spaced to the
+    # Massive free tier (5 calls/min), not just calls within a single day.
+    limiter = RateLimiter()
+
     for i, date_str in enumerate(trading_days):
         out_path = NEWS_DIR / f"day_{date_str}.json"
 
@@ -153,7 +161,7 @@ def refresh_news(
             skipped += 1
             continue
 
-        articles = _fetch_day_articles(date_str, api_key, universe)
+        articles = _fetch_day_articles(date_str, api_key, universe, limiter=limiter)
         day_total = sum(len(arts) for arts in articles.values())
         tickers_with_news = len(articles)
 
@@ -164,9 +172,6 @@ def refresh_news(
         total_articles += day_total
         print(f"  [{i+1}/{len(trading_days)}] {date_str}: "
               f"{tickers_with_news} tickers, {day_total} articles")
-
-        # Rate limit courtesy (Polygon free: 5/min)
-        time.sleep(0.2)
 
     print(f"\nDone: {fetched} days fetched, {skipped} skipped (existing)")
     print(f"Total articles: {total_articles}")

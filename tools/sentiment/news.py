@@ -2,7 +2,8 @@
 tools/sentiment/news.py — News sentiment analysis tool.
 
 Live/paper trading: fetches headlines from yfinance (free, no API key).
-Backtesting: uses Polygon.io cached fixtures (date-range historical queries).
+Backtesting: uses Massive (formerly Polygon) news API for date-range
+historical queries.
 
 The LLM (Research Agent) performs qualitative sentiment interpretation on the
 headlines — no pre-computed sentiment scores for yfinance articles.
@@ -18,6 +19,12 @@ from typing import List
 from tools._compat import tool
 
 logger = logging.getLogger(__name__)
+
+
+# Shared rate limiter for Massive (Polygon) API calls — free tier is ~5/min.
+from backtest.fixtures._rate_limit import RateLimiter
+
+_MASSIVE_RATE_LIMITER = RateLimiter()
 
 
 # ---------------------------------------------------------------------------
@@ -185,15 +192,16 @@ def _fetch_yfinance_news(ticker: str, count: int = 20) -> list[dict]:
 def _fetch_polygon_news(
     ticker: str, hours_back: int, api_key: str, as_of: datetime | None = None,
 ) -> list:
-    """Call Polygon.io /v2/reference/news and return raw article list.
+    """Call Massive (formerly Polygon) /v2/reference/news and return raw article list.
 
     Used for backtesting with date-range queries. Live trading uses yfinance.
+    Rate-limited to the Massive free tier (5 calls/min) with 429 backoff.
 
     Args:
         as_of: If provided, fetch news as of this timestamp (for backtesting).
                Uses ``as_of`` as the upper bound and ``as_of - hours_back`` as lower.
     """
-    import requests
+    from backtest.fixtures._rate_limit import RateLimiter, get_with_retry
 
     reference_time = as_of or datetime.now(timezone.utc)
     since = reference_time - timedelta(hours=hours_back)
@@ -207,12 +215,12 @@ def _fetch_polygon_news(
     }
     if as_of is not None:
         params['published_utc.lte'] = reference_time.strftime('%Y-%m-%dT%H:%M:%SZ')
-    resp = requests.get(
+    resp = get_with_retry(
         'https://api.massive.com/v2/reference/news',
         params=params,
+        limiter=_MASSIVE_RATE_LIMITER,
         timeout=10,
     )
-    resp.raise_for_status()
     return resp.json().get('results', [])
 
 

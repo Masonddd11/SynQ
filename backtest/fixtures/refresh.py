@@ -423,7 +423,7 @@ def refresh_wikipedia() -> None:
 
 
 def refresh_macro_data() -> None:
-    """Fetch macro economic data from Polygon/Massive economy endpoints.
+    """Fetch macro economic data from Massive (formerly Polygon) economy endpoints.
 
     Endpoints:
       /fed/v1/treasury-yields
@@ -433,10 +433,10 @@ def refresh_macro_data() -> None:
 
     Saves the latest observations to polygon/macro.json.
     """
-    import requests
     from config.settings import get_settings
+    from backtest.fixtures._rate_limit import RateLimiter, get_with_retry
 
-    print("\n[Polygon] Macro economic data ...")
+    print("\n[Massive] Macro economic data ...")
     api_key = get_settings().polygon_api_key
     if not api_key:
         print("    SKIP — POLYGON_API_KEY not set")
@@ -450,15 +450,16 @@ def refresh_macro_data() -> None:
         "labor_market": "/fed/v1/labor-market",
     }
 
+    limiter = RateLimiter()
     macro: dict = {}
     for key, path in endpoints.items():
         try:
-            resp = requests.get(
+            resp = get_with_retry(
                 f"{base}{path}",
                 params={"limit": 3, "sort": "date.desc", "apiKey": api_key},
+                limiter=limiter,
                 timeout=10,
             )
-            resp.raise_for_status()
             results = resp.json().get("results", [])
             macro[key] = results
             latest_date = results[0].get("date", "?") if results else "empty"
