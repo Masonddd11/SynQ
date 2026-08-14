@@ -53,7 +53,7 @@ Jings Street is local-first. Everything runs on your machine: the dashboard, the
 |----------|---------|
 | [Alpaca Markets](https://alpaca.markets/) | Broker API: order execution, positions, account data (paper and live) |
 | [yfinance](https://github.com/ranaroussi/yfinance) | Market data: daily and hourly bars, SPY benchmarks |
-| [Polygon.io](https://polygon.io/) | Historical news articles with per-ticker sentiment (used in backtesting) |
+| [Massive](https://massive.com/) (formerly Polygon.io) | Historical news articles with per-ticker sentiment (used in backtesting) |
 
 These are the only external services involved, and none of them are infrastructure. They are data and brokerage APIs called from your machine.
 
@@ -93,7 +93,7 @@ Once you're satisfied with backtest results, connect to Alpaca's paper trading e
 - **Python 3.11+**
 - **Node.js 18+** and npm
 - **Alpaca API keys** from a free [paper trading account](https://app.alpaca.markets/signup)
-- **Polygon.io API key** *(optional)* - required for news-informed backtesting. Without it, backtests run with neutral sentiment (no news signals). The free tier works. Live and paper trading use yfinance for news instead.
+- **Massive API key** *(optional, formerly Polygon.io)* - required for news-informed backtesting. Without it, backtests run with neutral sentiment (no news signals). The free tier works. Live and paper trading use yfinance for news instead.
 - **An OpenAI-compatible LLM endpoint** - recommended: [Ollama](https://ollama.com/) for a fully local setup, or OpenRouter, a LiteLLM proxy, LM Studio, or vLLM for hosted models.
 
 Zero cloud. No cloud account, credentials, or CLI required. Everything runs on this machine.

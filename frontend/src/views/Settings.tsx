@@ -339,7 +339,7 @@ function ApiKeysTab() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            Polygon.io
+            Massive (Polygon.io)
             <Badge variant="secondary" className="text-[10px]">News Data</Badge>
           </CardTitle>
           <p className="text-xs text-muted-foreground">

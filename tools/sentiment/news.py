@@ -208,7 +208,7 @@ def _fetch_polygon_news(
     if as_of is not None:
         params['published_utc.lte'] = reference_time.strftime('%Y-%m-%dT%H:%M:%SZ')
     resp = requests.get(
-        'https://api.polygon.io/v2/reference/news',
+        'https://api.massive.com/v2/reference/news',
         params=params,
         timeout=10,
     )

@@ -442,7 +442,7 @@ def refresh_macro_data() -> None:
         print("    SKIP — POLYGON_API_KEY not set")
         return
 
-    base = "https://api.polygon.io"
+    base = "https://api.massive.com"
     endpoints = {
         "treasury_yields": "/fed/v1/treasury-yields",
         "inflation": "/fed/v1/inflation",

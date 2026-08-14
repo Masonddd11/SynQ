@@ -79,7 +79,7 @@ def _fetch_day_articles(
     start_utc = end_utc - timedelta(hours=24)
 
     all_articles: list[dict] = []
-    url = "https://api.polygon.io/v2/reference/news"
+    url = "https://api.massive.com/v2/reference/news"
     params = {
         "published_utc.gte": start_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "published_utc.lte": end_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),

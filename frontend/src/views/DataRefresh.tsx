@@ -28,7 +28,7 @@ const DATA_SOURCES = [
   { key: 'daily', label: 'Daily Bars', desc: 'OHLCV via yfinance (~2yr, warmup included)', fixture: 'daily_bars' },
   { key: 'hourly', label: 'Hourly Bars', desc: 'Extended hours via yfinance (6mo)', fixture: 'hourly_bars' },
   { key: 'earnings_dates', label: 'Earnings Dates', desc: 'EPS data via yfinance', fixture: 'earnings_dates' },
-  { key: 'news', label: 'News Articles', desc: 'Daily articles via Polygon API', fixture: 'news' },
+  { key: 'news', label: 'News Articles', desc: 'Daily articles via Massive (Polygon) API', fixture: 'news' },
 ] as const;
 
 export function DataRefreshPage() {

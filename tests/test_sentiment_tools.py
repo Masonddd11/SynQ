@@ -587,3 +587,38 @@ def test_to_float_none():
 
 def test_to_float_invalid():
     assert _to_float('not-a-number') == pytest.approx(0.0)
+
+
+# ===========================================================================
+# _fetch_polygon_news — Massive hostname (rebrand regression)
+# ===========================================================================
+
+def test_fetch_polygon_news_hits_massive_com():
+    """The news fetch must target api.massive.com (Polygon rebranded to Massive).
+
+    api.polygon.io is on a sunset path; the news endpoint path, params and
+    apiKey query param are unchanged on the new host.
+    """
+    from tools.sentiment.news import _fetch_polygon_news
+
+    captured = {}
+
+    def fake_get(url, params=None, timeout=10):
+        captured['url'] = url
+        captured['params'] = params
+        resp = MagicMock()
+        resp.raise_for_status.return_value = None
+        resp.json.return_value = {'results': [{'id': 'abc'}]}
+        return resp
+
+    with patch('requests.get', side_effect=fake_get):
+        articles = _fetch_polygon_news(
+            ticker='TSLA', hours_back=24, api_key='pk_test',
+            as_of=datetime(2026, 8, 14, 12, 0, tzinfo=timezone.utc),
+        )
+
+    assert captured['url'].startswith('https://api.massive.com/v2/reference/news')
+    assert 'api.polygon.io' not in captured['url']
+    assert captured['params']['apiKey'] == 'pk_test'
+    assert articles == [{'id': 'abc'}]
+
