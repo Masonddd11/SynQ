@@ -1,0 +1,316 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+/* DESIGN.md: JingsStreet-japanese-high-density.
+   Light-only register: bright white field, dense ink, ONE utility-red signal,
+   cool-gray hairlines, square modules, mono figures. The dark variant is
+   neutralized (mapped to the same palette) so the app stays white-ground. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* ── Surface & ink ─────────────────────────────────────────────── */
+  --color-background: #ffffff;                 /* ground — bright white field */
+  --color-foreground: #111111;                 /* ink — dense near-black */
+  --color-ground: #ffffff;
+  --color-ink: #111111;
+  --color-ink-soft: rgba(17, 17, 17, 0.68);    /* secondary reading ink / meta */
+  --color-faint: rgba(17, 17, 17, 0.42);       /* muted / dormant content */
+
+  /* ── Rules & borders ───────────────────────────────────────────── */
+  --color-hairline: rgba(17, 17, 17, 0.15);    /* module borders, cell rules */
+  --color-border: rgba(17, 17, 17, 0.15);      /* structural border (hairline) */
+  --color-border-strong: rgba(17, 17, 17, 0.22); /* emphasized / active rules */
+  --color-input: rgba(17, 17, 17, 0.22);       /* input-dense 1px border */
+
+  /* ── Utility red — the single signal ───────────────────────────── */
+  --color-red: #d8332f;                        /* signal — prices, live/active */
+  --color-red-deep: #b22622;                   /* hover / pressed / emphasis */
+  --color-red-soft: rgba(216, 51, 47, 0.14);   /* active-module tint wash */
+
+  /* ── Cool grays — module fills & structure ─────────────────────── */
+  --color-gray-50: #fafafa;                    /* module background base */
+  --color-gray-100: #f2f2f2;                   /* module fill, banded rows */
+  --color-gray-200: #e5e5e5;                   /* checked / active module */
+
+  /* ── shadcn semantic mapping ───────────────────────────────────── */
+  --color-card: #fafafa;
+  --color-card-foreground: #111111;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111111;
+  --color-primary: #d8332f;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f2f2f2;
+  --color-secondary-foreground: #111111;
+  --color-muted: #f2f2f2;
+  --color-muted-foreground: rgba(17, 17, 17, 0.68);
+  --color-accent: #f2f2f2;
+  --color-accent-foreground: #111111;
+  --color-destructive: #b22622;
+  --color-destructive-foreground: #ffffff;
+  --color-ring: #d8332f;
+
+  /* ── Chart palette: ink grays + the red signal ─────────────────── */
+  --color-chart-1: #d8332f;
+  --color-chart-2: #111111;
+  --color-chart-3: #6b6b6b;
+  --color-chart-4: #b22622;
+  --color-chart-5: #3a3a3a;
+
+  /* ── Direction semantics (Japanese register) ─────────────────────
+     trading-up   = utility red (attention / live / active)
+     trading-down = faint ink (dormant / resting)
+     Replaces the old green-up / red-down hue semantics. */
+  --color-gain: #d8332f;
+  --color-loss: rgba(17, 17, 17, 0.45);
+  --color-gain-bg: rgba(216, 51, 47, 0.14);
+  --color-loss-bg: rgba(17, 17, 17, 0.07);
+
+  /* ── Shape: square mosaic, 2px reserved for tiny tags ──────────── */
+  --radius: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+
+  /* ── Type: gothic sans for UI, JetBrains Mono for every figure ─── */
+  --font-sans: 'Geist Variable', 'Helvetica Neue', 'Noto Sans JP',
+    'Hiragino Sans', 'BIZ UDGothic', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono',
+    monospace;
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 12px;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    min-height: 100vh;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  /* input-dense — bare white field, ink text, 1px border, 2px red focus ring */
+  .input-field {
+    @apply w-full rounded-none border border-input bg-background px-2 py-1.5 text-xs text-ink;
+    @apply focus:outline-none focus:ring-2 focus:ring-red;
+    font-family: var(--font-sans);
+  }
+
+  /* ── Typography tokens from DESIGN.md ───────────────────────────── */
+  .module-title {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+  .module-kicker {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+  }
+  .caption {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.03em;
+  }
+  .tab-heading {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.05em;
+  }
+  .number-hero {
+    font-family: var(--font-mono);
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .number-md {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+  }
+  .number-sm {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+  .number-xs {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Pulsing red live-mark (running sessions) ──────────────────── */
+  @keyframes js-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+  .js-pulse {
+    animation: js-pulse 1.4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .js-pulse {
+      animation: none;
+    }
+  }
+}
+
+/* Runtime variables — used directly by components via var(--color-*) */
+:root {
+  --color-background: #ffffff;
+  --color-foreground: #111111;
+  --color-ground: #ffffff;
+  --color-ink: #111111;
+  --color-ink-soft: rgba(17, 17, 17, 0.68);
+  --color-faint: rgba(17, 17, 17, 0.42);
+  --color-hairline: rgba(17, 17, 17, 0.15);
+  --color-border: rgba(17, 17, 17, 0.15);
+  --color-border-strong: rgba(17, 17, 17, 0.22);
+  --color-input: rgba(17, 17, 17, 0.22);
+  --color-red: #d8332f;
+  --color-red-deep: #b22622;
+  --color-red-soft: rgba(216, 51, 47, 0.14);
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f2f2f2;
+  --color-gray-200: #e5e5e5;
+  --color-card: #fafafa;
+  --color-card-foreground: #111111;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111111;
+  --color-primary: #d8332f;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f2f2f2;
+  --color-secondary-foreground: #111111;
+  --color-muted: #f2f2f2;
+  --color-muted-foreground: rgba(17, 17, 17, 0.68);
+  --color-accent: #f2f2f2;
+  --color-accent-foreground: #111111;
+  --color-destructive: #b22622;
+  --color-destructive-foreground: #ffffff;
+  --color-ring: #d8332f;
+  --color-chart-1: #d8332f;
+  --color-chart-2: #111111;
+  --color-chart-3: #6b6b6b;
+  --color-chart-4: #b22622;
+  --color-chart-5: #3a3a3a;
+  --color-gain: #d8332f;
+  --color-loss: rgba(17, 17, 17, 0.45);
+  --color-gain-bg: rgba(216, 51, 47, 0.14);
+  --color-loss-bg: rgba(17, 17, 17, 0.07);
+  --font-sans: 'Geist Variable', 'Helvetica Neue', 'Noto Sans JP',
+    'Hiragino Sans', 'BIZ UDGothic', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono',
+    monospace;
+
+  --background: #ffffff;
+  --foreground: #111111;
+  --card: #fafafa;
+  --card-foreground: #111111;
+  --popover: #ffffff;
+  --popover-foreground: #111111;
+  --primary: #d8332f;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f2f2;
+  --secondary-foreground: #111111;
+  --muted: #f2f2f2;
+  --muted-foreground: rgba(17, 17, 17, 0.68);
+  --accent: #f2f2f2;
+  --accent-foreground: #111111;
+  --destructive: #b22622;
+  --border: rgba(17, 17, 17, 0.15);
+  --input: rgba(17, 17, 17, 0.22);
+  --ring: #d8332f;
+  --chart-1: #d8332f;
+  --chart-2: #111111;
+  --chart-3: #6b6b6b;
+  --chart-4: #b22622;
+  --chart-5: #3a3a3a;
+  --gain: #d8332f;
+  --loss: rgba(17, 17, 17, 0.45);
+  --gain-bg: rgba(216, 51, 47, 0.14);
+  --loss-bg: rgba(17, 17, 17, 0.07);
+  --radius: 0rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111111;
+  --sidebar-primary: #d8332f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2f2f2;
+  --sidebar-accent-foreground: #111111;
+  --sidebar-border: rgba(17, 17, 17, 0.15);
+  --sidebar-ring: #d8332f;
+}
+
+/* Dark mode neutralized: the register is white-ground only. */
+.dark {
+  --background: #ffffff;
+  --foreground: #111111;
+  --card: #fafafa;
+  --card-foreground: #111111;
+  --popover: #ffffff;
+  --popover-foreground: #111111;
+  --primary: #d8332f;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f2f2;
+  --secondary-foreground: #111111;
+  --muted: #f2f2f2;
+  --muted-foreground: rgba(17, 17, 17, 0.68);
+  --accent: #f2f2f2;
+  --accent-foreground: #111111;
+  --destructive: #b22622;
+  --border: rgba(17, 17, 17, 0.15);
+  --input: rgba(17, 17, 17, 0.22);
+  --ring: #d8332f;
+  --chart-1: #d8332f;
+  --chart-2: #111111;
+  --chart-3: #6b6b6b;
+  --chart-4: #b22622;
+  --chart-5: #3a3a3a;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111111;
+  --sidebar-primary: #d8332f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2f2f2;
+  --sidebar-accent-foreground: #111111;
+  --sidebar-border: rgba(17, 17, 17, 0.15);
+  --sidebar-ring: #d8332f;
+}
