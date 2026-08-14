@@ -7,12 +7,21 @@ import { api } from '@/lib/api';
 
 // ─── Shared ───────────────────────────────────────────────────────────────
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, badge }: { label: string; children: React.ReactNode; badge?: React.ReactNode }) {
   return (
     <div>
-      <label className="text-xs font-medium text-foreground">{label}</label>
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-foreground">{label}</label>
+        {badge}
+      </div>
       <div className="mt-1">{children}</div>
     </div>
+  );
+}
+
+function SetBadge() {
+  return (
+    <Badge variant="secondary" className="text-[10px]">Set</Badge>
   );
 }
 
@@ -35,6 +44,8 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 
 interface ModelSettings {
   model_id: string;
+  llm_provider: string;
+  llm_base_url: string;
   extended_thinking_enabled: boolean;
   extended_thinking_budget: number;
   extended_thinking_effort: string;
@@ -42,6 +53,8 @@ interface ModelSettings {
 
 const DEFAULT_MODEL: ModelSettings = {
   model_id: 'deepseek-v4-flash',
+  llm_provider: 'openai',
+  llm_base_url: '',
   extended_thinking_enabled: false,
   extended_thinking_budget: 2048,
   extended_thinking_effort: 'medium',
@@ -98,6 +111,26 @@ function GeneralTab() {
               placeholder="deepseek-v4-flash, gpt-4o-mini, claude-sonnet-4, ..."
               value={model.model_id}
               onChange={(e) => updateModel('model_id', e.target.value)}
+            />
+          </Field>
+
+          <Field label="Provider">
+            <select
+              className="input-field text-xs w-40"
+              value={model.llm_provider}
+              onChange={(e) => updateModel('llm_provider', e.target.value)}
+            >
+              <option value="openai">openai</option>
+              <option value="ollama">ollama</option>
+            </select>
+          </Field>
+
+          <Field label="Base URL">
+            <input
+              className="input-field font-mono text-xs"
+              placeholder="https://openrouter.ai/api/v1"
+              value={model.llm_base_url}
+              onChange={(e) => updateModel('llm_base_url', e.target.value)}
             />
           </Field>
 
@@ -252,7 +285,7 @@ function ApiKeysTab() {
               Changing this name will start a new trading session (previous session is preserved).
             </p>
           </Field>
-          <Field label="API Key">
+          <Field label="API Key" badge={keys.alpaca_paper_api_key ? <SetBadge /> : undefined}>
             <input
               className="input-field font-mono text-xs"
               placeholder="PK..."
@@ -260,7 +293,7 @@ function ApiKeysTab() {
               onChange={(e) => updateKey('alpaca_paper_api_key', e.target.value)}
             />
           </Field>
-          <Field label="Secret Key">
+          <Field label="Secret Key" badge={keys.alpaca_paper_secret_key ? <SetBadge /> : undefined}>
             <input
               type="password"
               className="input-field font-mono text-xs"
@@ -283,7 +316,7 @@ function ApiKeysTab() {
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Field label="API Key">
+          <Field label="API Key" badge={keys.alpaca_live_api_key ? <SetBadge /> : undefined}>
             <input
               className="input-field font-mono text-xs"
               placeholder="AK..."
@@ -291,7 +324,7 @@ function ApiKeysTab() {
               onChange={(e) => updateKey('alpaca_live_api_key', e.target.value)}
             />
           </Field>
-          <Field label="Secret Key">
+          <Field label="Secret Key" badge={keys.alpaca_live_secret_key ? <SetBadge /> : undefined}>
             <input
               type="password"
               className="input-field font-mono text-xs"
@@ -314,7 +347,7 @@ function ApiKeysTab() {
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Field label="API Key">
+          <Field label="API Key" badge={keys.polygon_api_key ? <SetBadge /> : undefined}>
             <input
               type="password"
               className="input-field font-mono text-xs"
