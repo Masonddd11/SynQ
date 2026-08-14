@@ -15,9 +15,13 @@ from pydantic import ValidationError
 # ---------------------------------------------------------------------------
 
 def fresh_settings(**overrides):
-    """Return a new Settings instance with optional field overrides."""
+    """Return a new Settings instance with optional field overrides.
+
+    Isolated from .env (env_file=None) so default-value tests assert the
+    true pydantic defaults, not whatever the developer's .env sets.
+    """
     from config.settings import Settings
-    return Settings(**overrides)
+    return Settings(_env_file=None, **overrides)
 
 
 # ---------------------------------------------------------------------------
@@ -210,3 +214,177 @@ def test_env_override_llm_model(monkeypatch):
     s = get_settings()
     assert s.llm_model == "gpt-4o"
     get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# /api/settings/keys route: effective state (stored + .env fallback)
+# ---------------------------------------------------------------------------
+
+API_KEY_FIELDS = {
+    "alpaca_paper_account_name",
+    "alpaca_paper_api_key",
+    "alpaca_paper_secret_key",
+    "alpaca_live_api_key",
+    "alpaca_live_secret_key",
+    "polygon_api_key",
+}
+
+
+@pytest.fixture
+def api_client(tmp_path, monkeypatch):
+    """Isolate settings.json writes and force deterministic env per test."""
+    from fastapi.testclient import TestClient
+
+    from api.server import app
+    from config.settings import get_settings
+
+    monkeypatch.setattr("api.shared.SETTINGS_PATH", tmp_path / "settings.json")
+    monkeypatch.setenv("ALPACA_API_KEY", "")
+    monkeypatch.setenv("ALPACA_SECRET_KEY", "")
+    monkeypatch.setenv("POLYGON_API_KEY", "")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    monkeypatch.setenv("LLM_BASE_URL", "")
+    get_settings.cache_clear()
+    yield TestClient(app)
+    get_settings.cache_clear()
+
+
+def test_get_keys_returns_all_fields_shape(api_client):
+    """GET /api/settings/keys must always return the full 6-field shape."""
+    resp = api_client.get("/api/settings/keys")
+    assert resp.status_code == 200
+    assert set(resp.json().keys()) == API_KEY_FIELDS
+
+
+def test_get_keys_env_fallback_masked(api_client, monkeypatch):
+    """Keys configured only in .env must appear (masked), not empty."""
+    from config.settings import get_settings
+
+    monkeypatch.setenv("ALPACA_API_KEY", "PKTESTABCDEFGH")
+    monkeypatch.setenv("ALPACA_SECRET_KEY", "SKTEST123456")
+    get_settings.cache_clear()
+
+    resp = api_client.get("/api/settings/keys")
+    body = resp.json()
+    assert body["alpaca_paper_api_key"] == "PKTE" + "••••"
+    assert body["alpaca_paper_secret_key"] == "SKTE" + "••••"
+    assert body["alpaca_live_api_key"] == ""
+    assert body["alpaca_live_secret_key"] == ""
+    assert body["alpaca_paper_account_name"] == ""
+
+
+def test_get_keys_placeholder_treated_unset(api_client, monkeypatch):
+    """Placeholder .env values must be reported as unset ('')."""
+    from config.settings import get_settings
+
+    monkeypatch.setenv("POLYGON_API_KEY", "your_polygon_api_key_here")
+    get_settings.cache_clear()
+
+    resp = api_client.get("/api/settings/keys")
+    assert resp.json()["polygon_api_key"] == ""
+
+
+def test_get_keys_stored_overrides_env(api_client, monkeypatch):
+    """A stored key must win over a different .env value (masked on read)."""
+    from api.shared import write_settings
+    from config.settings import get_settings
+
+    write_settings({
+        "keys": {
+            "alpaca_paper_api_key": "STOREDKEY123",
+            "alpaca_paper_secret_key": "STOREDSECRET456",
+        }
+    })
+    monkeypatch.setenv("ALPACA_API_KEY", "ENVKEY9999999999")
+    get_settings.cache_clear()
+
+    resp = api_client.get("/api/settings/keys")
+    body = resp.json()
+    assert body["alpaca_paper_api_key"] == "STOR" + "••••"
+    assert body["alpaca_paper_secret_key"] == "STOR" + "••••"
+
+
+def test_put_keys_then_get_masked(api_client):
+    """PUT stores plaintext; GET returns masked; full round-trip works."""
+    from api.shared import read_settings
+
+    resp = api_client.put("/api/settings/keys", json={
+        "alpaca_paper_api_key": "PKROUNDTRIP1234",
+        "alpaca_paper_secret_key": "SKROUNDTRIP5678",
+        "polygon_api_key": "poly1234567890",
+    })
+    assert resp.status_code == 200
+    assert read_settings()["keys"]["alpaca_paper_api_key"] == "PKROUNDTRIP1234"
+
+    get = api_client.get("/api/settings/keys").json()
+    assert get["alpaca_paper_api_key"] == "PKRO" + "••••"
+    assert get["alpaca_paper_secret_key"] == "SKRO" + "••••"
+    assert get["polygon_api_key"] == "poly" + "••••"
+
+
+def test_put_keys_masked_value_keeps_stored(api_client):
+    """Sending back a masked '••••' value must leave the stored key unchanged."""
+    from api.shared import read_settings
+
+    api_client.put("/api/settings/keys", json={
+        "alpaca_paper_api_key": "PKREAL1234567890",
+    })
+    api_client.put("/api/settings/keys", json={
+        "alpaca_paper_api_key": "PKRE" + "••••",
+    })
+    stored = read_settings()["keys"]["alpaca_paper_api_key"]
+    assert stored == "PKREAL1234567890"
+
+
+# ---------------------------------------------------------------------------
+# /api/settings/model route: provider + base_url persistence (effective state)
+# ---------------------------------------------------------------------------
+
+
+def test_put_model_persists_provider_and_base_url(api_client):
+    """PUT /model must persist + apply llm_provider and llm_base_url."""
+    from api.shared import read_settings
+    from config.settings import get_settings
+
+    payload = {
+        "model_id": "gpt-4o-mini",
+        "llm_provider": "ollama",
+        "llm_base_url": "http://localhost:11434/v1",
+        "extended_thinking_enabled": False,
+        "extended_thinking_budget": 2048,
+        "extended_thinking_effort": "medium",
+    }
+    resp = api_client.put("/api/settings/model", json=payload)
+    assert resp.status_code == 200
+
+    saved = read_settings()["model"]
+    assert saved["llm_provider"] == "ollama"
+    assert saved["llm_base_url"] == "http://localhost:11434/v1"
+
+    get_settings.cache_clear()
+    s = get_settings()
+    assert s.llm_provider == "ollama"
+    assert s.llm_base_url == "http://localhost:11434/v1"
+
+    get = api_client.get("/api/settings/model").json()
+    assert get["llm_provider"] == "ollama"
+    assert get["llm_base_url"] == "http://localhost:11434/v1"
+
+
+def test_put_model_invalid_provider_ignored(api_client):
+    """An invalid llm_provider must be rejected, not crash or persist."""
+    from api.shared import read_settings
+    from config.settings import get_settings
+
+    resp = api_client.put("/api/settings/model", json={
+        "model_id": "gpt-4o-mini",
+        "llm_provider": "bogus",
+        "llm_base_url": "",
+    })
+    assert resp.status_code == 200
+
+    get_settings.cache_clear()
+    assert get_settings().llm_provider == "openai"
+
+    saved = read_settings().get("model", {})
+    assert saved.get("llm_provider", "openai") == "openai"
