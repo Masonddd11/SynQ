@@ -282,6 +282,11 @@ def run_single_cycle(settings, cycle_type: str) -> None:
 
 def main() -> None:
     """Application entry point."""
+    from utils.stdio import ensure_utf8_stdio
+    # Windows cp1252 stdout crashes on Δ echoed by the LLM — force UTF-8
+    # before any output is written (regression: zero backtest entries).
+    ensure_utf8_stdio()
+
     args = parse_args()
     settings = get_settings()
 

@@ -693,6 +693,11 @@ Simulator = Backtest
 # ---------------------------------------------------------------------------
 
 def main():
+    from utils.stdio import ensure_utf8_stdio
+    # Windows cp1252 stdout crashes on Δ echoed by the LLM — force UTF-8
+    # before any output is written (regression: zero backtest entries).
+    ensure_utf8_stdio()
+
     import argparse
     parser = argparse.ArgumentParser(description="Run backtest (cold start or from snapshot)")
     parser.add_argument("--days", type=int, default=20, help="Number of trading days")

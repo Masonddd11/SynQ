@@ -199,6 +199,12 @@ def safe_log(log_path: Path, msg: str):
 
 def run_backtest_subprocess(run_id: str, cmd: list[str], log_path: Path, env: dict | None = None):
     """Execute backtest in a subprocess, update run status on completion."""
+    if env is None:
+        env = dict(os.environ)
+    # Force UTF-8 stdout in the child: Windows cp1252 cannot encode the Δ
+    # character echoed by the LLM, which crashed every EOD cycle and left
+    # zero entries (see utils/stdio.py).
+    env.setdefault("PYTHONIOENCODING", "utf-8")
     log_fh = None
     try:
         log_fh = open(log_path, "a", encoding="utf-8")
