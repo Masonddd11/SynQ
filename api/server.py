@@ -30,6 +30,7 @@ from api.routes.paper import router as paper_router         # noqa: E402
 from api.routes.backtest import router as backtest_router     # noqa: E402
 from api.routes.playbook import router as playbook_router    # noqa: E402
 from api.routes.system import router as system_router        # noqa: E402
+from api.routes.universe import router as universe_router    # noqa: E402
 
 app.include_router(config_router)
 app.include_router(sessions_router)
@@ -39,3 +40,4 @@ app.include_router(paper_router)
 app.include_router(backtest_router)
 app.include_router(playbook_router)
 app.include_router(system_router)
+app.include_router(universe_router)
