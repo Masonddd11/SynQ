@@ -24,6 +24,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Trading',
     items: [
+      { href: '/universe', label: 'Universe' },
       { href: '/live/paper', label: 'Paper Trading' },
       { href: '/live/real', label: 'Live Trading' },
     ],

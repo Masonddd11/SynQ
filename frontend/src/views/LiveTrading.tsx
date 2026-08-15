@@ -1226,6 +1226,7 @@ export function PaperTradingPage() {
   const [triggering, setTriggering] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [modelId, setModelId] = useState('');
+  const [sharedSymbols, setSharedSymbols] = useState<string[]>([]);
   const pollRef = useRef(false);
 
   const isRunning = paperStatus?.status === 'running';
@@ -1235,6 +1236,8 @@ export function PaperTradingPage() {
     api.getAlpacaStatus()
       .then((res) => setAlpacaConfigured(res.paper_configured))
       .catch(() => setAlpacaConfigured(false));
+    // Shared universe (common restricter) — shown as a read-only summary.
+    api.getUniverse().then((cfg) => setSharedSymbols(cfg.symbols)).catch(() => {});
   }, []);
 
   const loadData = useCallback(() => {
@@ -1472,6 +1475,17 @@ export function PaperTradingPage() {
               Full Session &rarr;
             </Link>
           )}
+        </div>
+        {/* Shared universe restriction summary */}
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span>
+            {sharedSymbols.length > 0
+              ? `Universe: restricted to ${sharedSymbols.length} symbol${sharedSymbols.length !== 1 ? 's' : ''} (${sharedSymbols.slice(0, 6).join(', ')}${sharedSymbols.length > 6 ? '…' : ''})`
+              : 'Universe: full S&P 500 (no restriction)'}
+          </span>
+          <Link href="/universe" className="text-chart-1 hover:underline">
+            Edit
+          </Link>
         </div>
         <div className="flex gap-2 items-center">
           {sessionId && recentCycles.length > 0 && (

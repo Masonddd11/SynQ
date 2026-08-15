@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { MODEL_OPTIONS } from '@/lib/format';
+import { api } from '@/lib/api';
 
 function generateSessionId(name: string, snapshot?: string): string {
   const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
@@ -64,6 +66,7 @@ export function NewBacktestPage() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [sharedSymbols, setSharedSymbols] = useState<string[]>([]);
 
   const isResume = form.snapshot_session !== '';
   const filteredSnapshots = snapshots;
@@ -77,6 +80,8 @@ export function NewBacktestPage() {
         setDataRange({ start: hourly.first_date, end: hourly.last_date });
       }
     }).catch(() => {});
+    // Shared universe (common restricter) — shown as a read-only summary.
+    api.getUniverse().then((cfg) => setSharedSymbols(cfg.symbols)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -289,6 +294,26 @@ export function NewBacktestPage() {
             </div>
 
           </div>
+
+          {/* Shared universe summary (common restricter) */}
+          {!isResume && (
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <label className="text-xs font-medium text-foreground">Stock Universe</label>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {sharedSymbols.length > 0
+                    ? `Restricted to ${sharedSymbols.length} symbol${sharedSymbols.length !== 1 ? 's' : ''}: ${sharedSymbols.slice(0, 8).join(', ')}${sharedSymbols.length > 8 ? ` +${sharedSymbols.length - 8} more` : ''}`
+                    : 'Full S&P 500 universe (no restriction).'}
+                </p>
+              </div>
+              <Link
+                href="/universe"
+                className="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground hover:bg-accent transition-colors"
+              >
+                Edit Universe
+              </Link>
+            </div>
+          )}
 
           <Field label="Test Name" hint="Optional. Included in the auto-generated session ID.">
             <input

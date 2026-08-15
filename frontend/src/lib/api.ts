@@ -389,12 +389,14 @@ export const api = {
     fetchJSON<{ configured: boolean; paper_configured: boolean; live_configured: boolean }>('/config/alpaca'),
 
   // Paper trading
-  startPaperTrading: (config?: { model_id?: string }) =>
+  startPaperTrading: (config?: { model_id?: string; symbols?: string[] }) =>
     fetch(`${BASE}/paper/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config ?? {}),
     }).then((r) => r.json()) as Promise<{ run_id: string; status: string; session_id: string; immediate_cycle?: string; resumed?: boolean }>,
+  getPaperUniverse: () =>
+    fetchJSON<{ symbols: string[]; count: number }>('/paper/universe'),
   getPaperStatus: () =>
     fetchJSON<{ status: string; session_id: string | null; run_id?: string | null; started_at?: string; mode?: string }>('/paper/status'),
   stopPaperTrading: () =>
@@ -417,6 +419,20 @@ export const api = {
     }) as Promise<{ status: string; cycle: string; session_id: string; is_rerun: boolean }>,
   listPaperSessions: () =>
     fetchJSON<Record<string, unknown>[]>('/paper/sessions'),
+
+  // Shared universe (common restricter for all modes)
+  getUniverse: () =>
+    fetchJSON<{ symbols: string[]; updated_at: string }>('/universe'),
+  saveUniverse: (symbols: string[]) =>
+    fetch(`${BASE}/universe`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ symbols }),
+    }).then((r) => r.json()) as Promise<{ symbols: string[]; updated_at: string }>,
+  getUniverseAvailable: () =>
+    fetchJSON<{ symbols: string[]; count: number; sectors: Record<string, string> }>('/universe/available'),
+  getUniverseMeta: () =>
+    fetchJSON<Record<string, { sector: string; marketCap: number | null; marketCapBucket: string | null }>>('/universe/meta'),
 
   // Playbook
   getPlaybookTree: () => fetchJSON<PlaybookTreeEntry[]>('/playbook/tree'),
