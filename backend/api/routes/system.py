@@ -122,10 +122,7 @@ def _check_broker() -> dict:
 
 
 def _check_store() -> dict:
-    from config.settings import get_settings
-    store_path = Path(get_settings().session_dir)
-    if not store_path.is_absolute():
-        store_path = BASE_DIR / store_path
+    store_path = SESSIONS_DIR  # anchored to backend root via api.shared
     if not store_path.is_dir():
         return {"name": "store", "status": "down", "detail": f"Session directory missing: {store_path}"}
     probe = store_path / f".health_probe_{os.getpid()}.tmp"
@@ -139,10 +136,8 @@ def _check_store() -> dict:
 
 
 def _check_cache() -> dict:
-    from config.settings import get_settings
-    cache_path = Path(get_settings().cache_dir)
-    if not cache_path.is_absolute():
-        cache_path = BASE_DIR / cache_path
+    from config.paths import CACHE_DIR
+    cache_path = CACHE_DIR
     if cache_path.is_dir():
         return {"name": "cache", "status": "ok", "detail": f"Cache directory exists: {cache_path}"}
     return {"name": "cache", "status": "down", "detail": f"Cache directory missing: {cache_path}"}
@@ -354,10 +349,8 @@ def _probe_store() -> dict:
 
 def _probe_cache() -> dict:
     try:
-        s = get_settings()
-        cache_path = Path(s.cache_dir) if s.cache_dir else Path(".cache/market_data")
-        if not cache_path.is_absolute():
-            cache_path = BASE_DIR / cache_path
+        from config.paths import CACHE_DIR
+        cache_path = CACHE_DIR / "market_data"
         from tools.data.cache import DataCache
         import pandas as pd
         cache = DataCache(str(cache_path))

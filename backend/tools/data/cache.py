@@ -25,7 +25,7 @@ class DataCache:
                    Created automatically if it does not exist.
     """
 
-    def __init__(self, cache_dir: str = ".cache/market_data") -> None:
+    def __init__(self, cache_dir: str = "backend/.cache/market_data") -> None:
         self._dir = Path(cache_dir)
         self._dir.mkdir(parents=True, exist_ok=True)
 

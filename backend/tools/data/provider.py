@@ -79,7 +79,7 @@ class MarketDataProvider:
         self,
         api_key: str,
         secret_key: str,
-        cache_dir: str = ".cache/market_data",
+        cache_dir: str = "backend/.cache/market_data",
         data_feed: str = "iex",
     ) -> None:
         self._api_key = api_key
@@ -380,7 +380,7 @@ class MarketDataProvider:
 # Factory function
 # ---------------------------------------------------------------------------
 
-def create_provider(cache_dir: str = ".cache/market_data") -> MarketDataProvider:
+def create_provider(cache_dir: str = "backend/.cache/market_data") -> MarketDataProvider:
     """Create a :class:`MarketDataProvider` using credentials from settings.
 
     Args:

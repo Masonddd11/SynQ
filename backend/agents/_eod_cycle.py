@@ -744,9 +744,9 @@ class EODCycleMixin:
         playbook_reads: list[str] | None = None,
     ) -> None:
         """Save structured EOD cycle log for later review."""
-        from pathlib import Path
+        from config.paths import LOG_DIR
 
-        log_dir = Path("state/logs/eod")
+        log_dir = LOG_DIR / "eod"
         log_dir.mkdir(parents=True, exist_ok=True)
 
         today = _now_et_iso()[:10]

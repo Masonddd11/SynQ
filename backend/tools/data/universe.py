@@ -25,7 +25,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # JSON cache of symbol -> market cap (USD), keyed in the settings cache dir.
-_CAPS_DIR = Path(os.environ.get("UNIVERSE_CACHE_DIR", ".cache"))
+_CAPS_DIR = Path(os.environ.get("UNIVERSE_CACHE_DIR", "backend/.cache"))
 _CAPS_FILE = _CAPS_DIR / "market_caps.json"
 _CAPS_TTL_SECONDS = 24 * 3600
 

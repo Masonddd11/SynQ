@@ -11,11 +11,10 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from config.paths import SESSIONS_DIR
 from store.base import SessionStore
 
 logger = logging.getLogger(__name__)
-
-SESSIONS_DIR = Path("backtest/sessions")
 
 
 def _save_json(path: Path, data: Any) -> None:

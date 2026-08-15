@@ -19,11 +19,10 @@ from unittest.mock import patch
 import pandas as pd
 
 from agents._formatting import _extract_playbook_reads
+from config.paths import FIXTURES_DIR, SESSIONS_DIR
 from state.portfolio_state import PortfolioState, Position
 
 logger = logging.getLogger(__name__)
-
-SESSIONS_DIR = Path("backtest/sessions")
 
 
 class SessionStoppedError(Exception):
@@ -789,7 +788,7 @@ def run_one_day(
 
     # --- Load day's articles for MORNING/INTRADAY news windows ---
     day_articles: dict[str, list[dict]] | None = None
-    fixture_path = Path('backtest/fixtures/polygon/news') / f'day_{sim_date}.json'
+    fixture_path = FIXTURES_DIR / 'polygon' / 'news' / f'day_{sim_date}.json'
     if fixture_path.exists():
         day_articles = load_json(fixture_path)
 

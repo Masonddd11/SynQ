@@ -89,7 +89,7 @@ def refresh_alpaca_bars() -> None:
 
     all_symbols = _build_all_symbols()
     print(f"\n[Alpaca] Daily bars ({len(all_symbols)} symbols, 2 years) ...")
-    provider = create_provider(cache_dir=".cache/fixture_refresh")
+    provider = create_provider(cache_dir="backend/.cache/fixture_refresh")
     end = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
     start = end - timedelta(days=730)  # ~2 years
 
@@ -272,7 +272,7 @@ def refresh_alpaca_quotes() -> None:
 
     all_symbols = _build_all_symbols()
     print(f"\n[Alpaca] Latest quotes ({len(all_symbols)} symbols) ...")
-    provider = create_provider(cache_dir=".cache/fixture_refresh")
+    provider = create_provider(cache_dir="backend/.cache/fixture_refresh")
     quotes = provider.get_latest_quotes(all_symbols)
     for sym, q in list(quotes.items())[:5]:
         print(f"    {sym}: mid={q['mid_price']}")

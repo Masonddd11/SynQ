@@ -23,8 +23,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+from config.paths import STATE_DIR
+
 # Default persistence path. Overridable via env for tests / flexibility.
-_DEFAULT_PATH = os.environ.get("UNIVERSE_STORE_PATH", "state/universe.json")
+_DEFAULT_PATH = os.environ.get("UNIVERSE_STORE_PATH", str(STATE_DIR / "universe.json"))
 
 
 class UniverseStore:

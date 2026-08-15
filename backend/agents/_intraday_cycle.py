@@ -732,7 +732,7 @@ class IntradayCycleMixin:
         """Save structured INTRADAY cycle log for later review."""
         from pathlib import Path
 
-        log_dir = Path("state/logs/intraday")
+        log_dir = Path("backend/state/logs/intraday")
         log_dir.mkdir(parents=True, exist_ok=True)
 
         today = _now_et_iso()[:10]

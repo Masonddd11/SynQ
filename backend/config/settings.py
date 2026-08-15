@@ -174,10 +174,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_json: bool = False
     env: Literal["development", "staging", "production"] = "development"
-    state_file_path: str = "state/portfolio.json"
-    research_dir: str = "state/research"
-    cache_dir: str = ".cache"
-    session_dir: str = "backtest/sessions"
+    state_file_path: str = "backend/state/portfolio.json"
+    research_dir: str = "backend/state/research"
+    cache_dir: str = "backend/.cache"
+    session_dir: str = "backend/backtest/sessions"
 
     # -------------------------------------------------------------------------
     # Validators

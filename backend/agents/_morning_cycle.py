@@ -885,7 +885,7 @@ class MorningCycleMixin:
         """Save structured MORNING cycle log for later review."""
         from pathlib import Path
 
-        log_dir = Path("state/logs/morning")
+        log_dir = Path("backend/state/logs/morning")
         log_dir.mkdir(parents=True, exist_ok=True)
 
         today = _now_et_iso()[:10]

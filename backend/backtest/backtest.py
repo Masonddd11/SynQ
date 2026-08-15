@@ -35,6 +35,7 @@ from backtest.common import (
     run_one_day,
     session_dir,
 )
+from config.paths import FIXTURES_DIR
 from providers import MockBroker, FixtureProvider
 from config.settings import get_settings
 from state.agent_state import AgentState, set_state
@@ -517,7 +518,7 @@ class Backtest:
             return news_data, earnings_map
 
         # 2. Polygon fixture files
-        fixture_path = Path('backtest/fixtures/polygon/news') / f'day_{sim_date}.json'
+        fixture_path = FIXTURES_DIR / 'polygon' / 'news' / f'day_{sim_date}.json'
         if fixture_path.exists():
             articles = load_json(fixture_path)
         else:
