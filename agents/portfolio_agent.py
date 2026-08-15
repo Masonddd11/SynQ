@@ -73,12 +73,19 @@ class PortfolioAgent(EODCycleMixin, MorningCycleMixin, IntradayCycleMixin, BaseA
         portfolio_state: PortfolioState,
         provider=None,
         broker=None,
+        symbols: list[str] | None = None,
     ) -> None:
         super().__init__(settings)
         self.portfolio_state = portfolio_state
         self._provider = provider
         self._broker = broker
         self._researcher = None  # Cached ResearchAnalystAgent instance
+        # Universe restriction (order-preserving, deduped, uppercased).
+        if symbols:
+            from tools.data.universe import restrict_universe
+            self.universe_symbols: list[str] | None = restrict_universe(symbols)
+        else:
+            self.universe_symbols: list[str] | None = None
         # Detect backtest mode from provider type
         from providers import FixtureProvider
         self.backtest_mode = isinstance(provider, FixtureProvider)

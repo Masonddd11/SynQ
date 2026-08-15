@@ -208,7 +208,11 @@ class EODCycleMixin:
 
         # Fetch bars for the full universe so the screener can filter on pre-loaded data
         if new_entries_allowed:
-            universe = self._get_provider().get_universe()
+            if getattr(self, "universe_symbols", None):
+                # Universe restriction active: only the chosen symbols are tradeable.
+                universe = self.universe_symbols
+            else:
+                universe = self._get_provider().get_universe()
         else:
             universe = []
 
@@ -277,14 +281,21 @@ class EODCycleMixin:
                     "EOD_SIGNAL: reject blackout removed %d tickers: %s",
                     len(reject_filtered), reject_filtered,
                 )
-            # Merge watchlist tickers (always reviewed even if screener misses them)
+            # Merge watchlist tickers (always reviewed even if screener misses them).
+            # Under a strict universe restriction, only watchlist entries inside the
+            # chosen set are allowed — the restriction is authoritative.
+            restricted = set(getattr(self, "universe_symbols", None) or [])
+            merged_watchlist = 0
             for entry in watchlist_entries:
                 wt = entry["ticker"]
+                if restricted and wt not in restricted:
+                    continue
                 if wt not in existing_positions and wt not in candidates:
                     candidates.append(wt)
+                    merged_watchlist += 1
             logger.info(
                 "EOD_SIGNAL: %d screened + %d watchlist → %d new candidates (held=%d).",
-                len(screened), len(watchlist_entries),
+                len(screened), merged_watchlist,
                 len(candidates), len(existing_tickers),
             )
         else:

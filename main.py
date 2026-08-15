@@ -86,6 +86,12 @@ def parse_args() -> argparse.Namespace:
         help="Session ID for persisting cycle results to SessionStore.",
     )
     parser.add_argument(
+        "--symbols",
+        default=None,
+        help="Comma-separated symbol list restricting the agent's universe. "
+        "Overrides the shared Universe page list for this run.",
+    )
+    parser.add_argument(
         "--log-level",
         default=None,
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -247,7 +253,7 @@ def run_scheduler(settings, orchestrator, portfolio_state, session_id: str | Non
     scheduler.start()
 
 
-def run_single_cycle(settings, cycle_type: str) -> None:
+def run_single_cycle(settings, cycle_type: str, symbols: list[str] | None = None) -> None:
     """Execute a single cycle synchronously and print the result as JSON.
 
     All cycles are run via PortfolioAgent (research runs inline).
@@ -255,6 +261,7 @@ def run_single_cycle(settings, cycle_type: str) -> None:
     Args:
         settings: Application settings.
         cycle_type: One of MORNING, INTRADAY, EOD_SIGNAL.
+        symbols: Optional universe restriction (symbols the agent may trade).
     """
     state = AgentState(state_file=settings.state_file_path)
     state.load()
@@ -262,7 +269,7 @@ def run_single_cycle(settings, cycle_type: str) -> None:
 
     try:
         from agents.portfolio_agent import PortfolioAgent
-        orchestrator = PortfolioAgent(settings=settings, portfolio_state=state)
+        orchestrator = PortfolioAgent(settings=settings, portfolio_state=state, symbols=symbols)
         logger.info("Running %s trading cycle (PortfolioAgent).", cycle_type)
         result = orchestrator.run_trading_cycle(cycle_type)
     except ImportError as exc:
@@ -308,15 +315,30 @@ def main() -> None:
         logger.warning("--once is deprecated; use --cycle EOD_SIGNAL instead.")
         cycle_type = "EOD_SIGNAL"
 
+    # Universe restriction: explicit --symbols overrides the shared Universe page
+    # list; otherwise fall back to the persisted common restriction (if any).
+    symbols: list[str] | None = None
+    if args.symbols:
+        symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+    else:
+        try:
+            from state.universe import get_restricted_symbols
+            persisted = get_restricted_symbols()
+            if persisted:
+                symbols = persisted
+        except Exception:
+            logger.debug("No shared universe restriction configured", exc_info=True)
+
     logger.info(
-        "Trading system starting. env=%s mode=%s paper=%s",
+        "Trading system starting. env=%s mode=%s paper=%s universe=%s",
         settings.env,
         cycle_type or "scheduler",
         settings.alpaca_paper or args.paper,
+        (",".join(symbols) if symbols else "default"),
     )
 
     if cycle_type:
-        run_single_cycle(settings, cycle_type)
+        run_single_cycle(settings, cycle_type, symbols=symbols)
     else:
         state = AgentState(state_file=settings.state_file_path)
         state.load()
@@ -332,7 +354,7 @@ def main() -> None:
             )
             sys.exit(1)
 
-        orchestrator = PortfolioAgent(settings=settings, portfolio_state=state)
+        orchestrator = PortfolioAgent(settings=settings, portfolio_state=state, symbols=symbols)
         run_scheduler(settings, orchestrator, state, session_id=args.session)
 
 
