@@ -52,6 +52,7 @@ CLAUDE.md
 state/settings.json
 state/watchlist.json
 state/portfolio.json
+state/universe.json
 state/research/
 state/logs/
 
