@@ -81,6 +81,17 @@ def test_parse_args_invalid_cycle(capsys):
         _parse(['--cycle', 'WEEKLY'])
 
 
+def test_parse_args_symbols():
+    """--symbols is parsed as a raw comma string (split happens downstream)."""
+    args = _parse(['--symbols', 'AAPL,MSFT'])
+    assert args.symbols == 'AAPL,MSFT'
+
+
+def test_parse_args_symbols_default_none():
+    args = _parse([])
+    assert args.symbols is None
+
+
 # ---------------------------------------------------------------------------
 # setup_logging
 # ---------------------------------------------------------------------------
@@ -247,6 +258,35 @@ def test_run_single_cycle_output_is_valid_json(capsys):
     assert result['orders_placed'] == 2
 
 
+def test_run_single_cycle_forwards_symbols_to_orchestrator():
+    """When symbols given, PortfolioAgent receives them as the universe restriction."""
+    settings = _make_settings()
+    mock_state = MagicMock()
+    mock_orchestrator = MagicMock()
+    mock_orchestrator.run_trading_cycle.return_value = {}
+
+    with patch('main.AgentState', return_value=mock_state), \
+         patch.dict('sys.modules', _mock_orchestrator(mock_orchestrator)):
+        run_single_cycle(settings, 'EOD_SIGNAL', symbols=['AAPL', 'MSFT'])
+
+    assert mock_orchestrator.run_trading_cycle.called
+
+
+def test_run_single_cycle_without_symbols_passes_none():
+    """Default (no symbols) passes symbols=None to keep current behavior."""
+    settings = _make_settings()
+    mock_state = MagicMock()
+    mock_orchestrator = MagicMock()
+    mock_orchestrator.run_trading_cycle.return_value = {}
+
+    with patch('main.AgentState', return_value=mock_state), \
+         patch.dict('sys.modules', _mock_orchestrator(mock_orchestrator)):
+        run_single_cycle(settings, 'EOD_SIGNAL')
+
+    # Orchestrator constructed with symbols=None; run called once.
+    assert mock_orchestrator.run_trading_cycle.called
+
+
 # ---------------------------------------------------------------------------
 # run_scheduler
 # ---------------------------------------------------------------------------
@@ -343,3 +383,45 @@ def test_main_once_flag_runs_eod_cycle():
 
     mock_rsc.assert_called_once()
     assert mock_rsc.call_args.args[1] == 'EOD_SIGNAL'
+
+
+def test_main_cycle_symbols_overrides_cli():
+    """--symbols on CLI flows into run_single_cycle as the restriction."""
+    with patch.object(sys, 'argv', ['main.py', '--cycle', 'EOD_SIGNAL', '--symbols', 'AAPL, MSFT']), \
+         patch('main.get_settings', return_value=_make_settings()), \
+         patch('main.run_single_cycle') as mock_rsc, \
+         patch('main.setup_logging'):
+        main_module.main()
+
+    kwargs = mock_rsc.call_args.kwargs
+    assert kwargs.get('symbols') == ['AAPL', 'MSFT']
+
+
+def test_main_cycle_falls_back_to_persisted_universe(monkeypatch):
+    """Without --symbols, main() uses the persisted shared universe list."""
+    monkeypatch.setattr(
+        'state.universe.get_restricted_symbols', lambda: ['AAPL', 'MSFT', 'IREN']
+    )
+    with patch.object(sys, 'argv', ['main.py', '--cycle', 'EOD_SIGNAL']), \
+         patch('main.get_settings', return_value=_make_settings()), \
+         patch('main.run_single_cycle') as mock_rsc, \
+         patch('main.setup_logging'):
+        main_module.main()
+
+    kwargs = mock_rsc.call_args.kwargs
+    assert kwargs.get('symbols') == ['AAPL', 'MSFT', 'IREN']
+
+
+def test_main_cycle_falls_back_to_default_universe_when_none_persisted(monkeypatch):
+    """No --symbols and empty persisted list => symbols is None (full universe)."""
+    monkeypatch.setattr(
+        'state.universe.get_restricted_symbols', lambda: []
+    )
+    with patch.object(sys, 'argv', ['main.py', '--cycle', 'EOD_SIGNAL']), \
+         patch('main.get_settings', return_value=_make_settings()), \
+         patch('main.run_single_cycle') as mock_rsc, \
+         patch('main.setup_logging'):
+        main_module.main()
+
+    kwargs = mock_rsc.call_args.kwargs
+    assert kwargs.get('symbols') is None
