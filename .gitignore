@@ -18,16 +18,16 @@ __pycache__/
 .cache/
 
 # Backtest fixtures (large data files — regenerate with refresh.py)
-backtest/fixtures/alpaca/daily_bars.json
-backtest/fixtures/alpaca/hourly_bars.json
-backtest/fixtures/alpaca/latest_quotes.json
-backtest/fixtures/alpaca/trading_state.json
-backtest/fixtures/yfinance/daily_bars.json
-backtest/fixtures/yfinance/hourly_bars.json
-backtest/fixtures/wikipedia/
-backtest/fixtures/polygon/
-backtest/fixtures/refresh.log
-backtest/sessions/
+backend/backtest/fixtures/alpaca/daily_bars.json
+backend/backtest/fixtures/alpaca/hourly_bars.json
+backend/backtest/fixtures/alpaca/latest_quotes.json
+backend/backtest/fixtures/alpaca/trading_state.json
+backend/backtest/fixtures/yfinance/daily_bars.json
+backend/backtest/fixtures/yfinance/hourly_bars.json
+backend/backtest/fixtures/wikipedia/
+backend/backtest/fixtures/polygon/
+backend/backtest/fixtures/refresh.log
+backend/backtest/sessions/
 
 # Test cache
 .pytest_cache/
@@ -49,12 +49,12 @@ CLAUDE.md
 *.swp
 
 # Runtime state
-state/settings.json
-state/watchlist.json
-state/portfolio.json
-state/universe.json
-state/research/
-state/logs/
+backend/state/settings.json
+backend/state/watchlist.json
+backend/state/portfolio.json
+backend/state/universe.json
+backend/state/research/
+backend/state/logs/
 
 # Frontend
 frontend/node_modules/
