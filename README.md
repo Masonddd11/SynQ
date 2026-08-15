@@ -129,11 +129,11 @@ cd swing-trading-agent
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# 2. Install Python dependencies
-pip install -r requirements.txt
+# 2. Install Python dependencies (backend/ holds the Python app)
+pip install -r backend/requirements.txt
 
-# 3. Create your .env from the template
-Copy-Item .env.example .env
+# 3. Create your .env from the backend template
+Copy-Item backend\.env.example .env
 ```
 
 Open `.env` and set the LLM and Alpaca values:
@@ -145,6 +145,12 @@ Open `.env` and set the LLM and Alpaca values:
 
 ### Run a backtest
 
+All backend commands run from the repo root with `PYTHONPATH=backend` (the backend Python code lives in `backend/`). On PowerShell, set it per-command or for the session:
+
+```powershell
+$env:PYTHONPATH = "$PWD\backend"   # one-time for this terminal
+```
+
 ```powershell
 # Download historical market data fixtures (S&P 500 list, bars, earnings, news)
 python -m backtest.fixtures.refresh
@@ -155,12 +161,12 @@ python -m backtest.backtest --days 20 --start-date <YYYY-MM-DD>
 
 ### Start the dashboard
 
-The dashboard needs two processes: the FastAPI backend and the Next.js frontend. Run each in its own terminal.
+The dashboard needs two processes: the FastAPI backend and the Next.js frontend. Run each in its own terminal (with `PYTHONPATH=backend` set as above).
 
 Terminal 1, the API server:
 
 ```powershell
-python -m uvicorn api.server:app --port 8000
+python -m uvicorn api.server:app --app-dir backend --port 8000
 ```
 
 Terminal 2, the frontend:
@@ -173,7 +179,7 @@ npm run dev
 
 Open http://localhost:3000 for the Jings Street dashboard.
 
-Prefer one command? From `frontend/`, `npm run dev:all` starts both servers at once. `npm run dev:api` starts only the backend, with reload.
+Prefer one command? From `frontend/`, `npm run dev:all` starts both servers at once (it already passes `--app-dir backend`). `npm run dev:api` starts only the backend, with reload.
 
 ### Paper trading
 
@@ -199,28 +205,37 @@ python -m main --cycle MORNING
 python -m main --cycle INTRADAY
 ```
 
+> **Note on `PYTHONPATH`**: the CLI/scheduler classes (`python -m main`, `python -m backtest.*`, `python -m scheduler.*`) read the backend modules flatly (`from api...`, `from config...`), so they need `backend/` on `PYTHONPATH`. The FastAPI server is covered by `--app-dir backend`. If you'd rather `cd backend`, run `python -m main` directly there instead of using `PYTHONPATH`.
+
 ## Project Structure
 
 ```
 swing-trading-agent/
-├── agents/            # Core trading logic: EOD, Morning, Intraday cycles
-├── api/               # FastAPI server: REST endpoints for the dashboard
-├── backtest/          # Backtesting framework with mock broker
-│   ├── fixtures/      # Local market data fixtures
-│   └── sessions/      # Session data written by LocalStore (JSON)
-├── config/            # Settings (pydantic-settings)
+├── backend/           # Python backend (FastAPI + agents + backtesting)
+│   ├── agents/        # Core trading logic: EOD, Morning, Intraday cycles
+│   ├── api/           # FastAPI server: REST endpoints for the dashboard
+│   ├── backtest/      # Backtesting framework with mock broker
+│   │   ├── fixtures/  # Local market data fixtures
+│   │   └── sessions/  # Session data written by LocalStore (JSON)
+│   ├── config/        # Settings (pydantic-settings) + runtime path anchors
+│   ├── playbook/      # Investment decision framework and rules
+│   ├── providers/     # Broker (Alpaca) and market data abstractions
+│   ├── scheduler/     # APScheduler job definitions for trading cycles
+│   ├── state/         # Portfolio state + shared universe restriction (JSON)
+│   ├── store/         # LocalStore: JSON file persistence
+│   ├── tests/         # Backend test suite (pytest)
+│   ├── tools/         # LLM tool definitions (data, research, execution, risk)
+│   ├── utils/         # Shared utilities
+│   ├── requirements.txt
+│   └── main.py        # CLI entrypoint: scheduler, single cycle, session mode
 ├── frontend/          # Next.js 15 App Router dashboard (Jings Street)
 │   ├── app/           # App Router routes (thin server wrappers)
 │   └── src/           # Client components, API client, page components
-├── playbook/          # Investment decision framework and rules
-├── providers/         # Broker (Alpaca) and market data abstractions
-├── scheduler/         # APScheduler job definitions for trading cycles
-├── state/             # Portfolio state management (positions, cash, stats)
-├── store/             # LocalStore: JSON file persistence (backtest/sessions)
-├── tools/             # LLM tool definitions (data, research, execution, risk)
-├── main.py            # CLI entrypoint: scheduler, single cycle, session mode
-└── requirements.txt   # Python dependencies
+├── docs/              # Architecture and design docs
+├── .env               # Runtime config (LLM, Alpaca, portfolio-state paths)
+└── README.md
 ```
+
 
 ## Security
 
