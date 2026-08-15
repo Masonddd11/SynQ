@@ -203,6 +203,18 @@ def _find_last_paper_session(account_name: str = "") -> str | None:
 
 class PaperTradingRequest(BaseModel):
     model_id: str | None = None
+    symbols: list[str] | None = None
+
+
+def _resolve_symbols(explicit: list[str] | None, persisted: list[str]) -> list[str]:
+    """Resolve the effective universe restriction for a run.
+
+    ``explicit`` (per-request symbols) wins if provided (even empty = no
+    restriction); otherwise fall back to the persisted shared Universe list.
+    """
+    if explicit is not None:
+        return explicit
+    return persisted
 
 
 @router.post("/start")
@@ -227,11 +239,28 @@ def start_paper_trading(req: PaperTradingRequest):
 
     run_id = f"paper_{session_id}"
 
+    # Universe restriction: explicit request symbols override the persisted
+    # shared Universe list (the common restricter). Empty list = full universe.
+    from state.universe import get_restricted_symbols
+    persisted_symbols = get_restricted_symbols()
+    if is_resumed and req.symbols is None:
+        # On resume, reapply the session's previously saved symbols if present
+        try:
+            meta_path = session_path / "meta.json"
+            if meta_path.exists():
+                prev_meta = read_json(meta_path) or {}
+                persisted_symbols = prev_meta.get("symbols") or persisted_symbols
+        except Exception:
+            pass
+    effective_symbols = _resolve_symbols(req.symbols, persisted_symbols)
+
     cmd = [
         sys.executable, "-m", "main",
         "--paper",
         "--session", session_id,
     ]
+    if effective_symbols:
+        cmd += ["--symbols", ",".join(effective_symbols)]
     env_override = dict(os.environ)
     paper_key = saved_keys.get("alpaca_paper_api_key", "")
     paper_secret = saved_keys.get("alpaca_paper_secret_key", "")
@@ -266,6 +295,7 @@ def start_paper_trading(req: PaperTradingRequest):
         "resumed_at": datetime.utcnow().isoformat() + "Z",
         "model_id": req.model_id or existing_meta.get("model_id"),
         "account_name": account_name,
+        "symbols": effective_symbols,
         "pid": None,
     })
 
@@ -300,6 +330,7 @@ def start_paper_trading(req: PaperTradingRequest):
                     "started_at": run.started_at,
                     "resumed_at": datetime.utcnow().isoformat() + "Z",
                     "model_id": req.model_id,
+                    "symbols": effective_symbols,
                     "pid": proc.pid,
                 })
                 return
@@ -442,6 +473,25 @@ def sync_paper_positions():
         raise HTTPException(500, str(e))
 
 
+@router.get("/universe")
+def get_paper_universe():
+    """Return the S&P 500 candidate checklist for the symbol picker."""
+    from tools.data import screener
+
+    try:
+        tickers = [t.upper() for t in screener.get_sp500_tickers()]
+    except Exception as exc:
+        raise HTTPException(502, f"Unable to load S&P 500 universe: {exc}")
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for t in tickers:
+        if t not in seen:
+            seen.add(t)
+            ordered.append(t)
+    return {"symbols": ordered, "count": len(ordered)}
+
+
 @router.get("/available-cycle")
 def get_available_cycle():
     """Return the cycle that can be manually triggered right now."""
@@ -480,6 +530,17 @@ def trigger_cycle(req: TriggerCycleRequest):
     try:
         cmd = [sys.executable, "-m", "main", "--cycle", cycle,
                "--paper", "--session", session_id]
+
+        # Reapply the session's universe restriction to a manual cycle.
+        try:
+            meta_path = SESSIONS_DIR / session_id / "meta.json"
+            if meta_path.exists():
+                meta = read_json(meta_path) or {}
+                syms = meta.get("symbols")
+                if syms:
+                    cmd += ["--symbols", ",".join(syms)]
+        except Exception:
+            pass
 
         env_override = dict(os.environ)
         saved_keys = _env_keys()
