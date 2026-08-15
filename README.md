@@ -77,6 +77,25 @@ Validate your playbook and quant engine changes against historical market data. 
 
 ![Analysis](docs/images/analysis.png)
 
+#### Stock Universe selection
+
+The **Universe** page (sidebar → Trading → Universe) holds the **shared symbol restriction** applied to every trading mode — backtesting, paper trading, and live trading. It renders the full S&P 500 as a checklist; toggle symbols on to enable them, or use the search box and the add-symbol field to include any ticker (e.g. `IREN`).
+
+- **Empty selection = no restriction** — the agent trades the full S&P 500 universe (the default behaviour).
+- **Any enabled symbols** — the agent may only trade those symbols in every mode. Backtesting, paper trading, and (when live trading is started) live trading all read this shared list on launch.
+- The **New Backtest** and **Paper Trading** pages show a read-only summary of the active restriction with an **Edit Universe** link.
+
+Symbols without fixture bar data are not backtestable until data is refreshed for them (`python -m backtest.fixtures.refresh`). Watchlist entries are strictly excluded when a restriction is active — the chosen universe is authoritative.
+
+You can also restrict a run directly from the CLI, overriding the shared list for that run:
+
+```powershell
+python -m backtest.backtest --days 20 --start-date <YYYY-MM-DD> --symbols AAPL,MSFT
+python -m main --paper --session <session-id> --symbols AAPL,MSFT
+```
+
+On the CLI, `--symbols` restricts the screened universe to the requested names (SPY/QQQ are always kept for benchmark and breadth). No `--symbols` means the persisted shared Universe list (or the full universe when that is empty), matching pre-feature behaviour.
+
 ### Paper Trading
 
 Once you're satisfied with backtest results, connect to Alpaca's paper trading environment to run the agent against live market data without risking real money.
