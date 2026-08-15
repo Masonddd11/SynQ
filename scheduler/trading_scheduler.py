@@ -215,7 +215,7 @@ class TradingScheduler:
     # Lifecycle
     # -------------------------------------------------------------------------
 
-    def _job_next_run(job) -> str:
+    def _job_next_run(self, job) -> str:
         """Best-effort next-run time for a job across APScheduler versions.
 
         APScheduler 3.10 exposes ``next_run_time`` as a plain attribute;
