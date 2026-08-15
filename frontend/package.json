@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "dev:api": "python -m uvicorn api.server:app --app-dir .. --reload",
-    "dev:all": "concurrently \"next dev\" \"python -m uvicorn api.server:app --app-dir .. --reload\"",
+    "dev:api": "python -m uvicorn api.server:app --app-dir backend --reload",
+    "dev:all": "concurrently \"next dev\" \"python -m uvicorn api.server:app --app-dir backend --reload\"",
     "build": "next build",
     "lint": "next lint",
     "start": "next start",

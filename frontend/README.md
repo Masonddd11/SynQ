@@ -16,7 +16,7 @@ proxies every `/api/*` request to it during development.
 
 ```bash
 # From the repo root: start the FastAPI backend on :8000
-python -m uvicorn api.server:app --app-dir . --reload
+python -m uvicorn api.server:app --app-dir backend --reload
 
 # Then, in this directory: install and start Next.js on :3000
 npm install
@@ -67,4 +67,4 @@ src/
 
 `next.config.ts` rewrites `/api/:path*` to `http://localhost:8000/api/:path*`.
 The backend target is fixed at `localhost:8000` — the FastAPI app lives in the
-repo root (`api/server.py`) and is **not** bundled with the frontend.
+`backend/` directory (`backend/api/server.py`) and is **not** bundled with the frontend.
