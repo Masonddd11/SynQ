@@ -127,6 +127,16 @@ class Settings(BaseSettings):
     screener_lookback_days: int = 30           # calendar days of history to fetch
 
     # -------------------------------------------------------------------------
+    # Backtest universe selection (market-cap buckets + size cap)
+    # -------------------------------------------------------------------------
+    # Market-cap buckets: low   = [0, market_cap_low_max)
+    #                     mid   = [market_cap_low_max, market_cap_mid_max)
+    #                     high  = [market_cap_mid_max, inf)
+    market_cap_low_max: float = 2_000_000_000     # upper bound of "low" bucket (USD)
+    market_cap_mid_max: float = 10_000_000_000    # upper bound of "mid" bucket (USD)
+    universe_max_symbols: int = 200               # hard cap on resolved universe size
+
+    # -------------------------------------------------------------------------
     # Backtest slippage model
     # -------------------------------------------------------------------------
     slippage_base_bps: float = 5.0             # minimum half-spread (basis points)
