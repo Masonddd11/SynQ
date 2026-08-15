@@ -70,11 +70,14 @@ class Backtest:
         session_id: str | None = None,
         snapshot_path: str | None = None,
         dump_prompts: bool = False,
+        symbols: list[str] | None = None,
     ) -> None:
         self.start_cash = start_cash
         self.snapshot: dict | None = None
         self.dump_prompts = dump_prompts
         self.provider = FixtureProvider()
+        self.symbols = symbols
+        self._universe: list[str] | None = None  # resolved lazily on first use
 
         # Load snapshot if provided
         if snapshot_path:
@@ -124,6 +127,41 @@ class Backtest:
         if self.dump_prompts:
             self.dump_dir = self.session_path / "prompts"
             self.dump_dir.mkdir(parents=True, exist_ok=True)
+
+    # ------------------------------------------------------------------
+    # Universe selection
+    # ------------------------------------------------------------------
+
+    def _universe_symbols(self) -> list[str]:
+        """Resolve the backtest universe to a concrete symbol list.
+
+        With no ``symbols`` restrict this is the full ``available_symbols``
+        (identical to pre-feature behaviour). With ``symbols`` provided, only
+        requested names that have fixture bars are kept, plus the always-include
+        benchmark/breadth names (SPY/QQQ). Raises a clear ``ValueError`` if
+        none of the requested names resolve to data.
+        """
+        if self._universe is not None:
+            return self._universe
+
+        from tools.data.universe import _ALWAYS_INCLUDE
+
+        available = set(self.provider.available_symbols)
+
+        if not self.symbols:
+            self._universe = list(available)
+            return self._universe
+
+        requested = [t.strip().upper() for t in self.symbols if t.strip()]
+        resolved = [t for t in requested if t in available]
+        if not resolved:
+            raise ValueError(
+                "None of the requested symbols have fixture data: "
+                + ", ".join(requested)
+            )
+        always = [t for t in _ALWAYS_INCLUDE if t in available]
+        self._universe = list(dict.fromkeys([*resolved, *always]))
+        return self._universe
 
     # ------------------------------------------------------------------
     # State initialization
@@ -384,14 +422,14 @@ class Backtest:
 
         # Pre-load hourly bars once
         hourly_bars = self.provider.get_bars(
-            self.provider.available_symbols, timeframe='hour',
+            self._universe_symbols(), timeframe='hour',
         )
 
         try:
             for day_num in range(self.sim_days):
                 sim_date = clock.today
                 bars = self.provider.get_bars(
-                    self.provider.available_symbols,
+                    self._universe_symbols(),
                     end=datetime.strptime(sim_date, '%Y-%m-%d'),
                 )
                 prev_date = clock.yesterday if day_num > 0 else sim_date
@@ -707,6 +745,7 @@ def main():
     parser.add_argument("--session", type=str, default=None, help="Session ID")
     parser.add_argument("--snapshot", type=str, default=None, help="Path to snapshot.json (resume from prior run)")
     parser.add_argument("--model", type=str, default=None, help="LLM model override")
+    parser.add_argument("--symbols", type=str, default=None, help="Comma-separated symbol list to restrict the backtest universe")
     parser.add_argument("--dump-prompts", action="store_true", help="Dump all cycle prompts to disk")
     args = parser.parse_args()
 
@@ -726,6 +765,7 @@ def main():
         session_id=args.session,
         snapshot_path=args.snapshot,
         dump_prompts=args.dump_prompts,
+        symbols=args.symbols.split(",") if args.symbols else None,
     )
     bt.run()
 

@@ -38,6 +38,8 @@ class PreconditionRequest(BaseModel):
     extended_thinking_budget: int = 2048
     enable_playbook: bool = True
     run_mode: str = "local"
+    symbols: list[str] | None = None
+    market_cap_filter: str | None = None
 
 
 class SimulationRequest(BaseModel):
@@ -80,6 +82,74 @@ def _compute_sim_days(start_date: str, end_date: str) -> int:
 # ─── Endpoints ──────────────────────────────────────────────────────────────
 
 
+def _resolve(requested_source: str, requested_symbols, market_cap: str | None) -> dict:
+    """Resolve a requested universe against available fixture symbols."""
+    from config.settings import get_settings
+    from tools.data.universe import fetch_market_caps, resolve_universe
+
+    settings = get_settings()
+    provider = get_fixture_provider()
+    available = set(provider.available_symbols)
+
+    # When a market-cap filter is active on a CUSTOM (bounded) universe, fetch
+    # caps on demand so the filter works immediately; disks-cached thereafter.
+    # For the full S&P 500 (unbounded) we only read the existing cache to avoid
+    # thousands of live yfinance calls blocking a single request.
+    caps = None
+    if market_cap in ("low", "mid", "high") and requested_source == "custom":
+        base = resolve_universe(
+            source="custom",
+            symbols=requested_symbols,
+            market_cap=None,
+            available=available,
+            low_max=settings.market_cap_low_max,
+            mid_max=settings.market_cap_mid_max,
+        )
+        caps = fetch_market_caps(base.symbols)
+
+    res = resolve_universe(
+        source=requested_source,
+        symbols=requested_symbols,
+        market_cap=market_cap,
+        available=available,
+        caps=caps,
+        low_max=settings.market_cap_low_max,
+        mid_max=settings.market_cap_mid_max,
+    )
+
+    # Default source: when no explicit source is given, S&P 500 is the default.
+    if requested_source != "custom":
+        requested_source = "sp500"
+
+    return {
+        "source": requested_source,
+        "market_cap_filter": market_cap,
+        "symbols": res.symbols,
+        "count": len(res.symbols),
+        "missing": res.missing,
+        "unknown_cap": res.unknown_cap,
+    }
+
+
+@router.get("/universe")
+def get_universe(source: str = "sp500", symbols: str = "", market_cap: str = ""):
+    """Resolve a requested stock universe against available fixture data.
+
+    Query params:
+      source:     ``sp500`` (default) or ``custom``.
+      symbols:    Comma-separated symbols (only meaningful when source=custom).
+      market_cap: Optional bucket filter: ``low | mid | high``.
+
+    Returns eligible symbols plus ``missing`` / ``unknown_cap`` reporting.
+    """
+    try:
+        cap = market_cap or None
+        req_symbols = [s for s in symbols.split(",") if s.strip()] if symbols else None
+        return _resolve(source, req_symbols, cap)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
 @router.post("/precondition")
 def start_precondition(req: PreconditionRequest):
     """Launch a precondition backtest in a background process."""
@@ -104,6 +174,27 @@ def start_precondition(req: PreconditionRequest):
     ]
     if req.model_id:
         cmd += ["--model", req.model_id]
+
+    # Universe restriction: explicit request symbols / a market-cap filter win;
+    # otherwise fall back to the persisted shared Universe list (the common
+    # restricter). Empty effective list => full universe (pre-feature behavior).
+    if req.symbols or req.market_cap_filter:
+        source = "custom" if req.symbols else "sp500"
+        resolved = _resolve(source, req.symbols, req.market_cap_filter)
+        if not resolved["symbols"]:
+            raise HTTPException(
+                400, "No symbols remain after applying the selected filters."
+            )
+        cmd += ["--symbols", ",".join(resolved["symbols"])]
+    else:
+        # No per-request restriction: apply the shared Universe list if non-empty.
+        try:
+            from state.universe import get_restricted_symbols
+            shared = get_restricted_symbols()
+            if shared:
+                cmd += ["--symbols", ",".join(shared)]
+        except Exception:
+            pass
 
     os.environ["EXTENDED_THINKING_ENABLED"] = str(req.extended_thinking).lower()
     os.environ["EXTENDED_THINKING_BUDGET"] = str(req.extended_thinking_budget)
